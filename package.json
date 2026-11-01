@@ -1,0 +1,26 @@
+{
+  "name": "tampslat-platform",
+  "version": "0.2.0",
+  "private": true,
+  "description": "TAMPslat Digital and Ready \u2014 static workspace with Cloudflare Workers backend",
+  "scripts": {
+    "dev:api": "wrangler dev",
+    "deploy:api": "wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply tampslat-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply tampslat-db --remote",
+    "check:worker": "node --check backend/worker.js",
+    "check:app": "node --check app.js && node --check landing.js",
+    "dev:site": "python3 -m http.server 5500 --bind 127.0.0.1",
+    "dev:converter": "docker compose up --build -d",
+    "check:converter": "node --check services/document-converter/server.js",
+    "dev:engines": "docker compose up --build -d",
+    "stop:engines": "docker compose down",
+    "check:font": "python3 -m py_compile services/font-compiler/app.py",
+    "check:studio": "node --check services/document-converter/server.js && python3 -m py_compile services/font-compiler/app.py",
+    "check:new-studios": "node --check workspace-orchestrator.js && node --check workers/task-worker.js && node --check engines/ai-refinement-client.js",
+    "dev:workspace": "npm run dev:site"
+  },
+  "devDependencies": {
+    "wrangler": "^4.45.0"
+  }
+}

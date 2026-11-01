@@ -1,0 +1,14 @@
+
+/* TAMPslat shared workspace identity */
+:root{--tamp-violet:#6848e8;--tamp-blue:#3988f5;--tamp-cyan:#22b8cf;--tamp-coral:#ff806d;--tamp-amber:#f3b64b;--tamp-emerald:#27b889}
+.topbar .brand img,.top .brand img,.ops-top>a:first-child img,.shell .top .brand img{width:clamp(142px,15vw,176px)!important;height:42px!important;max-height:42px!important;object-fit:contain!important;object-position:left center!important}
+.ops-top>a:first-child img{width:176px!important;height:42px!important}
+.topbar,.top,.ops-top{min-height:68px}
+.studio-accent,.tool-card,.studio-card{border-top:3px solid var(--tamp-violet)}
+/* Richer but restrained tool identity */
+.tool-card:nth-child(4n+1),.studio-card:nth-child(4n+1){--card-accent:var(--tamp-violet)}
+.tool-card:nth-child(4n+2),.studio-card:nth-child(4n+2){--card-accent:var(--tamp-blue)}
+.tool-card:nth-child(4n+3),.studio-card:nth-child(4n+3){--card-accent:var(--tamp-emerald)}
+.tool-card:nth-child(4n),.studio-card:nth-child(4n){--card-accent:var(--tamp-coral)}
+.tool-card,.studio-card{border-top-color:var(--card-accent,var(--tamp-violet))}
+.workspace-shell,.shell,.ops-shell{--brand:var(--tamp-violet)}

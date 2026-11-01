@@ -1,0 +1,9 @@
+services:
+  tampslat-font-compiler:
+    build: .
+    container_name: tampslat-font-compiler
+    ports:
+      - "8790:8790"
+    environment:
+      PORT: 8790
+    restart: unless-stopped

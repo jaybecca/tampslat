@@ -1,0 +1,13 @@
+services:
+  tampslat-document-converter:
+    build: .
+    container_name: tampslat-document-converter
+    ports:
+      - "8788:8788"
+    environment:
+      PORT: 8788
+      MAX_UPLOAD_BYTES: 52428800
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,mode=1777

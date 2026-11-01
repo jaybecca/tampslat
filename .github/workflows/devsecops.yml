@@ -1,0 +1,41 @@
+name: TAMPslat DevSecOps
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate Worker and browser engines
+        run: |
+          node --check backend/worker.js
+          node --check backend-client.js
+          node --check site-locale.js
+          node --check workspace-i18n.js
+          node --check engines/ai-refinement-client.js
+          node --check engines/studio-design-engine.js
+          node --check app.js
+          node --check landing.js
+      - name: Scan filesystem for vulnerabilities, misconfiguration and secrets
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          scanners: vuln,misconfig,secret
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Dependency review
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4

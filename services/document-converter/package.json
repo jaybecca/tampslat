@@ -1,0 +1,15 @@
+{
+  "name": "tampslat-document-conversion-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Isolated LibreOffice document conversion service for TAMPslat",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.2",
+    "helmet": "^8.0.0",
+    "cors": "^2.8.5"
+  }
+}
