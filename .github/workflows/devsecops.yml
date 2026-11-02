@@ -96,8 +96,10 @@ jobs:
         run: |
           kubectl create deployment document-converter --image=tampslat-document-converter:ci --port=8788
           kubectl create deployment font-compiler --image=tampslat-font-compiler:ci --port=8790
-          kubectl patch deployment document-converter -p '{"spec":{"template":{"spec":{"containers":[{"name":"document-converter","imagePullPolicy":"Never","env":[{"name":"PORT","value":"8788"},{"name":"MAX_UPLOAD_BYTES","value":"52428800"}]}]}}}}'
-          kubectl patch deployment font-compiler -p '{"spec":{"template":{"spec":{"containers":[{"name":"font-compiler","imagePullPolicy":"Never","env":[{"name":"PORT","value":"8790"}]}]}}}}'
+          kubectl set env deployment/document-converter PORT=8788 MAX_UPLOAD_BYTES=52428800
+          kubectl set env deployment/font-compiler PORT=8790
+          kubectl patch deployment document-converter --type=json -p='[{"op":"replace","path":"/spec/template/spec/containers/0/imagePullPolicy","value":"Never"}]'
+          kubectl patch deployment font-compiler --type=json -p='[{"op":"replace","path":"/spec/template/spec/containers/0/imagePullPolicy","value":"Never"}]'
           kubectl expose deployment document-converter --port=8788 --target-port=8788
           kubectl expose deployment font-compiler --port=8790 --target-port=8790
           kubectl rollout status deployment/document-converter --timeout=180s
