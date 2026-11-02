@@ -1,0 +1,38 @@
+# Dependencies and build tools
+node_modules/
+.wrangler/
+
+# GitHub and local development files
+.git/
+.github/
+.vscode/
+.DS_Store
+
+# Backend code and database migrations
+backend/
+
+# Secrets and environment files
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+
+# Project configuration and documentation
+*.toml
+*.md
+*.mdx
+*.log
+*.bak
+*.backup
+
+# Package manifests and lockfiles
+package.json
+package-lock.json
+bun.lock
+bun.lockb
+yarn.lock
+pnpm-lock.yaml
+
+# Deployment and development files
+docker-compose.yml
+Dockerfile
