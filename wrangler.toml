@@ -30,3 +30,7 @@ required = ["OPENAI_API_KEY"]
 [[r2_buckets]]
 binding = "FILES"
 bucket_name = "tampslat-files"
+
+[assets]
+directory = "."
+run_worker_first = ["/api/*"]
