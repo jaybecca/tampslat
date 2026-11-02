@@ -1,5 +1,7 @@
 # TAMPslat File Studio — Conversion and publishing engines
 
+> **Package integrity note (2 November 2026):** The current ZIP includes the Document Converter and Font Studio browser interfaces, but does **not** include `services/document-converter/` or `services/font-compiler/`, even though `docker-compose.yml` references those build contexts. Consequently, the corresponding Docker services cannot be built from this ZIP. The converter engine and CFF OpenType compiler are not operational until those source folders are restored. Do not expose a substitute unauthenticated service publicly.
+
 ## Browser pages
 
 - `document-converter.html`: conversion queue UI. It calls the separate LibreOffice service.

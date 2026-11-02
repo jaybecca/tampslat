@@ -5,7 +5,3 @@ node_modules/
 .env
 .env.*
 !.env.example
-
-# Python generated files
-__pycache__/
-*.py[cod]
