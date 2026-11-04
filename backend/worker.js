@@ -158,7 +158,7 @@ async function route(req, env) {
       if(!d)return fail('Invalid JSON.');
       const email=String(d.email||'').trim().toLowerCase(),password=String(d.password||'');
       signupStage='input_validation';
-      if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||email.length>254)return fail('Enter a valid email address.');
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return fail('Enter a valid email address.');
       if(password.length<10||password.length>128)return fail('Use a password between 10 and 128 characters.');
       signupStage='email_lookup';
       const exists=await env.DB.prepare('SELECT id FROM users WHERE email=?').bind(email).first();
