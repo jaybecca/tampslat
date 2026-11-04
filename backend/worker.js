@@ -36,7 +36,8 @@ async function rateLimit(env, key, limit, seconds) {
 async function currentUser(req, env) {
   const token=cookie(req,'tampslat_session'); if(!token)return null;
   const hash=await sha256(token), now=Math.floor(Date.now()/1000);
-  const row=await env.DB.prepare(`SELECT u.id,u.email,u.plan,u.role,u.credits_balance FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?`).bind(hash,now).first();
+  const row=await env.DB.prepare(`SELECT u.id,u.email,u.plan,u.role,u.credits_balance,u.plan_expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?`).bind(hash,now).first();
+  if(row?.plan_expires_at&&Date.parse(row.plan_expires_at)<=Date.now()){await env.DB.prepare(`UPDATE users SET plan='free',plan_expires_at=NULL,billing_provider=NULL,billing_subscription_id=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND plan_expires_at IS NOT NULL AND datetime(plan_expires_at)<=datetime('now')`).bind(row.id).run();row.plan='free';row.plan_expires_at=null;}
   return row||null;
 }
 async function newSession(env, userId) {
