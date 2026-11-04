@@ -27,6 +27,8 @@ jobs:
           node --check backend/billing.js
           node --check backend-client.js
           node --check site-locale.js
+          node --check pricing-language.js
+          node --check support-translations.js
           node --check workspace-i18n.js
           node --check auth-language.js
           node --check engines/ai-refinement-client.js
