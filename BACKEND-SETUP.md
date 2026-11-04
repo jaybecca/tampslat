@@ -83,7 +83,7 @@ For local testing, apply to the local D1 database instead:
 npx wrangler d1 migrations apply tampslat-db --local
 ```
 
-The payment flow is not yet approved for live charges. Test using provider sandbox cards/accounts, verify successful and failed payments, duplicate webhooks, mismatched amounts/currencies, insufficient credits and plan expiry before changing `PAYMENT_MODE` to `live`. Live mode uses the existing `flutterwave_secret_key`, `flutterwave_webhook_secret_hash`, and `paddle_api_key` secrets plus a new `paddle_webhook_secret` secret.
+The payment flow is not yet approved for live charges. Test using provider sandbox cards/accounts, verify successful and failed payments, duplicate webhooks, mismatched amounts/currencies, insufficient credits and plan expiry before changing `PAYMENT_MODE` to `live`. Live mode uses the existing `flutterwave_secret_key`, `flutterwave_webhook_secret_hash`, and `paddle_api_key` secrets plus a new `paddle_webhook_secret` secret. It also requires both Worker variables `PAYMENT_MODE=live` and `ALLOW_LIVE_PAYMENTS=true`; without the explicit approval flag, the checkout endpoint refuses live payments.
 
 ## 4. Run and deploy
 
