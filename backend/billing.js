@@ -45,6 +45,7 @@ async function applyPaidOrder(env,order,{eventId,paymentRef,periodEndsAt=null,su
   statements.push(env.DB.prepare('UPDATE billing_webhook_events SET processed_at=CURRENT_TIMESTAMP WHERE provider=? AND event_id=? AND processed_at IS NULL').bind(provider,eventKey));
   await env.DB.batch(statements);
 }
+async function checkoutRateLimit(env,userId){const now=Math.floor(Date.now()/1000),bucket='checkout:'+userId+':'+Math.floor(now/600);await env.DB.prepare('INSERT INTO rate_limits(bucket,count,window_start) VALUES(?,1,?) ON CONFLICT(bucket) DO UPDATE SET count=count+1').bind(bucket,now).run();const row=await env.DB.prepare('SELECT count FROM rate_limits WHERE bucket=?').bind(bucket).first();return (row?.count||0)<=8}
 async function createCheckout(req,env,user){
   try{await env.DB.prepare('SELECT id FROM billing_orders LIMIT 1').first()}catch{return fail('Billing database is not ready. Apply migration 0002_billing.sql before enabling checkout.',503)}
   const data=await readJson(req);if(!data)return fail('Invalid checkout request.');
@@ -56,6 +57,7 @@ async function createCheckout(req,env,user){
   const currency=africa?(country==='NG'?'NGN':(String(data.currency||'USD').toUpperCase()==='USD'?'USD':'USD')):String(data.currency||'USD').toUpperCase();
   if(!['NGN','USD','GBP','EUR','CAD'].includes(currency))return fail('This currency is not supported for checkout.');
   const amount=priceFor(kind,plan,currency,quantity);if(!Number.isFinite(amount)||amount<=0)return fail('This price is not available in your selected currency.',400);
+  if(!await checkoutRateLimit(env,user.id))return fail('Too many checkout attempts. Please wait a few minutes and try again.',429);
   const orderId=id(),amountMinor=Math.round(amount*100),origin=originFor(env);
   const order={id:orderId,user_id:user.id,provider,kind,plan:kind==='plan'?plan:null,quantity,currency,amount_minor:amountMinor};
   await env.DB.prepare('INSERT INTO billing_orders(id,user_id,provider,kind,plan,quantity,currency,amount_minor,status) VALUES(?,?,?,?,?,?,?,?,\'pending\')').bind(order.id,order.user_id,order.provider,order.kind,order.plan,order.quantity,order.currency,order.amount_minor).run();
