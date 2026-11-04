@@ -30,6 +30,7 @@ jobs:
           node --check auth-language.js
           node --check engines/ai-refinement-client.js
           node --check engines/studio-design-engine.js
+          node --check engines/document-preview.js
           node --check app.js
           node --check landing.js
 
@@ -40,7 +41,7 @@ jobs:
           const vm = require('node:vm');
           const files = [
             'index.html', 'pricing.html', 'support.html', 'login.html',
-            'signup.html', 'tools.html', 'zip-studio.html'
+            'signup.html', 'tools.html', 'zip-studio.html', 'file-studio.html'
           ];
           for (const file of files) {
             const html = fs.readFileSync(file, 'utf8');
