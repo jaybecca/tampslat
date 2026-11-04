@@ -56,7 +56,7 @@ async function createCheckout(req,env,user){
   if(kind!=='plan'&&kind!=='credits')return fail('Unsupported purchase type.');
   const country=countryOf(req),africa=AFRICAN.has(country),provider=africa?'flutterwave':'paddle';
   const currency=africa?(country==='NG'?'NGN':(String(data.currency||'USD').toUpperCase()==='USD'?'USD':'USD')):String(data.currency||'USD').toUpperCase();
-  if(!['NGN','USD','GBP','EUR','CAD'].includes(currency))return fail('This currency is not supported for checkout.');
+  const supportedCurrencies=provider==='flutterwave'?['NGN','USD']:['USD','GBP','EUR','CAD'];if(!supportedCurrencies.includes(currency))return fail('This currency is not supported by the selected regional payment provider.');
   const amount=priceFor(kind,plan,currency,quantity);if(!Number.isFinite(amount)||amount<=0)return fail('This price is not available in your selected currency.',400);
   if(!await checkoutRateLimit(env,user.id))return fail('Too many checkout attempts. Please wait a few minutes and try again.',429);
   const orderId=id(),amountMinor=Math.round(amount*100),origin=originFor(env);
