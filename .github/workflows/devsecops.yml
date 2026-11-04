@@ -24,6 +24,7 @@ jobs:
       - name: Validate Worker and browser engines
         run: |
           node --check backend/worker.js
+          node --check backend/billing.js
           node --check backend-client.js
           node --check site-locale.js
           node --check workspace-i18n.js
@@ -41,7 +42,7 @@ jobs:
           const vm = require('node:vm');
           const files = [
             'index.html', 'pricing.html', 'support.html', 'login.html',
-            'signup.html', 'tools.html', 'zip-studio.html', 'file-studio.html', 'document-converter.html', 'vault-studio.html'
+            'signup.html', 'tools.html', 'zip-studio.html', 'file-studio.html', 'pdf-studio.html', 'document-converter.html', 'vault-studio.html'
           ];
           for (const file of files) {
             const html = fs.readFileSync(file, 'utf8');
