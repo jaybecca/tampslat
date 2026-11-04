@@ -149,12 +149,38 @@ async function route(req, env) {
   if(!env.DB)return fail('Database binding DB is not configured.',503);
   if(path==='/api/webhooks/flutterwave'&&req.method==='POST')return handleBilling(req,env,null,path);if(path==='/api/webhooks/paddle'&&req.method==='POST')return handleBilling(req,env,null,path);
   if(path==='/api/auth/signup'&&req.method==='POST'){
-    if(!await rateLimit(env,`signup:${req.headers.get('CF-Connecting-IP')||'unknown'}`,8,3600))return fail('Too many account attempts. Try again later.',429);
-    const d=await bodyJson(req,5000);if(!d)return fail('Invalid JSON.');const email=String(d.email||'').trim().toLowerCase(),password=String(d.password||'');
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return fail('Enter a valid email address.');if(password.length<10||password.length>128)return fail('Use a password between 10 and 128 characters.');
-    const exists=await env.DB.prepare('SELECT id FROM users WHERE email=?').bind(email).first();if(exists)return fail('An account with this email may already exist. Try signing in.',409);
-    const id=uid(),salt=b64url(crypto.getRandomValues(new Uint8Array(16))),hash=await passwordHash(password,salt),credits=Math.max(0,Math.min(50,Number(env.FREE_AI_CREDITS||5)));
-    try{await env.DB.prepare('INSERT INTO users(id,email,password_hash,password_salt,credits_balance) VALUES(?,?,?,?,?)').bind(id,email,hash,salt,credits).run();if(credits)await env.DB.prepare('INSERT INTO credit_ledger(id,user_id,amount,event_type,description) VALUES(?,?,?,?,?)').bind(uid(),id,credits,'grant','Welcome credits').run();const token=await newSession(env,id);const user=await env.DB.prepare('SELECT id,email,plan,role,credits_balance FROM users WHERE id=?').bind(id).first();return json({user:safeUser(user),message:'Account created. Email verification is not enabled until an email provider is configured.'},201,{'Set-Cookie':sessionCookie(token,60*60*24*14)});}catch(e){console.error('TAMPslat signup operation failed', {name:e?.name,message:e?.message,stack:e?.stack});return fail('Could not create account. Try signing in or use another email.',500);}
+    const previewDiagnostics=env.ENVIRONMENT==='preview';
+    let signupStage='rate_limit';
+    try {
+      if(!await rateLimit(env,`signup:${req.headers.get('CF-Connecting-IP')||'unknown'}`,8,3600))return fail('Too many account attempts. Try again later.',429);
+      signupStage='request_body';
+      const d=await bodyJson(req,5000);
+      if(!d)return fail('Invalid JSON.');
+      const email=String(d.email||'').trim().toLowerCase(),password=String(d.password||'');
+      signupStage='input_validation';
+      if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||email.length>254)return fail('Enter a valid email address.');
+      if(password.length<10||password.length>128)return fail('Use a password between 10 and 128 characters.');
+      signupStage='email_lookup';
+      const exists=await env.DB.prepare('SELECT id FROM users WHERE email=?').bind(email).first();
+      if(exists)return fail('An account with this email may already exist. Try signing in.',409);
+      signupStage='password_hash';
+      const id=uid(),salt=b64url(crypto.getRandomValues(new Uint8Array(16))),hash=await passwordHash(password,salt),credits=Math.max(0,Math.min(50,Number(env.FREE_AI_CREDITS||5)));
+      signupStage='user_insert';
+      await env.DB.prepare('INSERT INTO users(id,email,password_hash,password_salt,credits_balance) VALUES(?,?,?,?,?)').bind(id,email,hash,salt,credits).run();
+      if(credits){
+        signupStage='welcome_credit_insert';
+        await env.DB.prepare('INSERT INTO credit_ledger(id,user_id,amount,event_type,description) VALUES(?,?,?,?,?)').bind(uid(),id,credits,'grant','Welcome credits').run();
+      }
+      signupStage='session_create';
+      const token=await newSession(env,id);
+      signupStage='user_readback';
+      const user=await env.DB.prepare('SELECT id,email,plan,role,credits_balance FROM users WHERE id=?').bind(id).first();
+      return json({user:safeUser(user),message:'Account created. Email verification is not enabled until an email provider is configured.'},201,{'Set-Cookie':sessionCookie(token,60*60*24*14)});
+    } catch(e) {
+      console.error('TAMPslat signup failed', {stage:signupStage,name:e?.name||'Error'});
+      if(previewDiagnostics)return json({error:'Unexpected server error.',diagnostic:{stage:signupStage}},500);
+      throw e;
+    }
   }
   if(path==='/api/auth/login'&&req.method==='POST'){
     if(!await rateLimit(env,`login:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many sign-in attempts. Try again later.',429);
