@@ -46,7 +46,7 @@ async function applyPaidOrder(env,order,{eventId,paymentRef,periodEndsAt=null,su
   await env.DB.batch(statements);
 }
 async function createCheckout(req,env,user){
-  if(!await env.DB.prepare('SELECT 1').first())return fail('Billing storage is unavailable.',503);
+  try{await env.DB.prepare('SELECT id FROM billing_orders LIMIT 1').first()}catch{return fail('Billing database is not ready. Apply migration 0002_billing.sql before enabling checkout.',503)}
   const data=await readJson(req);if(!data)return fail('Invalid checkout request.');
   const kind=String(data.kind||'plan').toLowerCase(),plan=String(data.plan||'').toLowerCase();
   const quantity=Math.max(1,Math.min(10000,Math.floor(Number(data.quantity)||1)));
@@ -56,7 +56,6 @@ async function createCheckout(req,env,user){
   const currency=africa?(country==='NG'?'NGN':(String(data.currency||'USD').toUpperCase()==='USD'?'USD':'USD')):String(data.currency||'USD').toUpperCase();
   if(!['NGN','USD','GBP','EUR','CAD'].includes(currency))return fail('This currency is not supported for checkout.');
   const amount=priceFor(kind,plan,currency,quantity);if(!Number.isFinite(amount)||amount<=0)return fail('This price is not available in your selected currency.',400);
-  if(!await env.DB.prepare('SELECT 1').first())return fail('Billing database is not ready. Apply migration 0002_billing.sql first.',503);
   const orderId=id(),amountMinor=Math.round(amount*100),origin=originFor(env);
   const order={id:orderId,user_id:user.id,provider,kind,plan:kind==='plan'?plan:null,quantity,currency,amount_minor:amountMinor};
   await env.DB.prepare('INSERT INTO billing_orders(id,user_id,provider,kind,plan,quantity,currency,amount_minor,status) VALUES(?,?,?,?,?,?,?,?,\'pending\')').bind(order.id,order.user_id,order.provider,order.kind,order.plan,order.quantity,order.currency,order.amount_minor).run();
@@ -128,10 +127,10 @@ async function flutterwaveWebhook(req,env){
 async function paddleWebhook(req,env){
   const secret=paddleWebhookKey(env);if(!secret)return fail('Paddle webhook verification is not configured.',503);
   const raw=await req.text(),header=req.headers.get('Paddle-Signature')||'';
-  const fields=Object.fromEntries(header.split(';').map(x=>x.trim().split('=')));
-  const ts=Number(fields.ts),signature=fields.h1||'';
-  if(!Number.isFinite(ts)||!signature||Math.abs(Date.now()/1000-ts)>300)return fail('Invalid or expired Paddle signature.',401);
-  const expected=await hmacHex(secret,ts+':'+raw);if(!safeEqual(expected,signature))return fail('Invalid Paddle signature.',401);
+  const fields=header.split(';').map(x=>x.trim().split('='));
+  const ts=Number(fields.find(x=>x[0]==='ts')?.[1]),signatures=fields.filter(x=>x[0]==='h1').map(x=>x[1]);
+  if(!Number.isFinite(ts)||!signatures.length||Math.abs(Date.now()/1000-ts)>300)return fail('Invalid or expired Paddle signature.',401);
+  const expected=await hmacHex(secret,ts+':'+raw);if(!signatures.some(signature=>safeEqual(expected,signature)))return fail('Invalid Paddle signature.',401);
   let event;try{event=JSON.parse(raw)}catch{return fail('Invalid webhook payload.')}
   const data=event.data||{},eventId=String(event.event_id||'');
   if(!eventId)return fail('Missing Paddle event ID.');
