@@ -47,6 +47,7 @@ async function applyPaidOrder(env,order,{eventId,paymentRef,periodEndsAt=null,su
 }
 async function checkoutRateLimit(env,userId){const now=Math.floor(Date.now()/1000),bucket='checkout:'+userId+':'+Math.floor(now/600);await env.DB.prepare('INSERT INTO rate_limits(bucket,count,window_start) VALUES(?,1,?) ON CONFLICT(bucket) DO UPDATE SET count=count+1').bind(bucket,now).run();const row=await env.DB.prepare('SELECT count FROM rate_limits WHERE bucket=?').bind(bucket).first();return (row?.count||0)<=8}
 async function createCheckout(req,env,user){
+  if(paymentMode(env)==='live'&&env.ALLOW_LIVE_PAYMENTS!=='true')return fail('Live payments are disabled until sandbox verification and explicit live approval are complete.',503);
   try{await env.DB.prepare('SELECT id FROM billing_orders LIMIT 1').first()}catch{return fail('Billing database is not ready. Apply migration 0002_billing.sql before enabling checkout.',503)}
   const data=await readJson(req);if(!data)return fail('Invalid checkout request.');
   const kind=String(data.kind||'plan').toLowerCase(),plan=String(data.plan||'').toLowerCase();
