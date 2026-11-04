@@ -1,3 +1,5 @@
+import { handleBilling } from './billing.js';
+
 const encoder = new TextEncoder();
 const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...headers } });
 const fail = (message, status = 400) => json({ error: message }, status);
@@ -143,8 +145,8 @@ async function route(req, env) {
     return json({country:country||null,language:languageMap[country]||'en',currency:currencyMap[country]||'USD',source:country?'cloudflare-edge-country':'browser-default'},200,{'Cache-Control':'private, max-age=300','Vary':'CF-IPCountry'});
   }
   if(path==='/api/health'&&req.method==='GET')return json({ok:true,service:'tampslat-api',time:new Date().toISOString(),features:{auth:true,ai:Boolean(env.OPENAI_API_KEY),ocr:Boolean(env.AI),database:Boolean(env.DB)}});
-  if(path==='/api/billing/checkout'&&req.method==='POST')return fail('Secure checkout is not configured yet. Merchant credentials, provider routing and payment verification must be enabled before accepting payments.',503);
   if(!env.DB)return fail('Database binding DB is not configured.',503);
+  if(path==='/api/webhooks/flutterwave'&&req.method==='POST')return handleBilling(req,env,null,path);if(path==='/api/webhooks/paddle'&&req.method==='POST')return handleBilling(req,env,null,path);
   if(path==='/api/auth/signup'&&req.method==='POST'){
     if(!await rateLimit(env,`signup:${req.headers.get('CF-Connecting-IP')||'unknown'}`,8,3600))return fail('Too many account attempts. Try again later.',429);
     const d=await bodyJson(req,5000);if(!d)return fail('Invalid JSON.');const email=String(d.email||'').trim().toLowerCase(),password=String(d.password||'');
@@ -164,6 +166,7 @@ async function route(req, env) {
   }
   if(path==='/api/auth/me'&&req.method==='GET'){const u=await currentUser(req,env);return u?json({user:safeUser(u)}):fail('Not signed in.',401);}
   const user=await currentUser(req,env);if(!user)return fail('Sign in to use this feature.',401);
+  const billingResponse=await handleBilling(req,env,user,path);if(billingResponse)return billingResponse;
   if(path==='/api/admin/overview'&&req.method==='GET'){
     if(user.role!=='admin')return fail('Administrator access required.',403);
     const [totals,plans,credits]=await Promise.all([
@@ -183,7 +186,7 @@ async function route(req, env) {
     const d=await bodyJson(req,100000);if(!d)return fail('Invalid JSON.');const kind=String(d.kind||'note').slice(0,40),title=String(d.title||'Untitled work').trim().slice(0,160),content=JSON.stringify(d.content??{});if(content.length>80000)return fail('Work item is too large.');const id=uid();await env.DB.prepare('INSERT INTO work_items(id,user_id,kind,title,content_json) VALUES(?,?,?,?,?)').bind(id,user.id,kind,title,content).run();return json({id,title,kind},201);
   }
   if(path.startsWith('/api/work/')&&req.method==='DELETE'){const id=path.split('/').pop();const result=await env.DB.prepare('DELETE FROM work_items WHERE id=? AND user_id=?').bind(id,user.id).run();return result.meta?.changes?json({ok:true}):fail('Work item not found.',404);}
-  if(path==='/api/billing/summary'&&req.method==='GET'){const ledger=await env.DB.prepare('SELECT amount,event_type,description,created_at FROM credit_ledger WHERE user_id=? ORDER BY created_at DESC LIMIT 50').bind(user.id).all();return json({plan:user.plan,credits:user.credits_balance,ledger:ledger.results||[],paymentsEnabled:false});}
+  if(path==='/api/billing/summary'&&req.method==='GET'){const ledger=await env.DB.prepare('SELECT amount,event_type,description,created_at FROM credit_ledger WHERE user_id=? ORDER BY created_at DESC LIMIT 50').bind(user.id).all();const latest=await env.DB.prepare('SELECT provider,kind,plan,status,created_at,paid_at FROM billing_orders WHERE user_id=? ORDER BY created_at DESC LIMIT 1').bind(user.id).first();return json({plan:user.plan,planExpiresAt:user.plan_expires_at||null,billingProvider:user.billing_provider||null,credits:user.credits_balance,ledger:ledger.results||[],latestOrder:latest||null,paymentsEnabled:true,paymentMode:env.PAYMENT_MODE||'sandbox'});}
   return fail('Endpoint not found.',404);
 }
 export default { async fetch(req,env) { try { const res=await route(req,env); const headers=new Headers(res.headers); for(const [k,v] of Object.entries(corsHeaders(req,env)))headers.set(k,v); headers.set('X-Content-Type-Options','nosniff');headers.set('Referrer-Policy','strict-origin-when-cross-origin');headers.set('X-Frame-Options','DENY');return new Response(res.body,{status:res.status,statusText:res.statusText,headers}); } catch(e) { return json({error:'Unexpected server error.'},500); } } };
