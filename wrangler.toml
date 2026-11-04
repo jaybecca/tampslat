@@ -38,6 +38,13 @@ run_worker_first = ["/api/*"]
 # Worker Previews use isolated resources. Never point these at production.
 [previews.vars]
 ENVIRONMENT = "preview"
+APP_ORIGIN = "https://feat-tampslat-studio-language-preview-build-tampslat.beccaogbeide.workers.dev"
+AI_PROVIDER = "openai"
+AI_MODEL = "gpt-4.1-mini"
+FREE_AI_CREDITS = "5"
+AI_CREDIT_COST = "1"
+MAX_AI_INPUT_CHARS = "12000"
+MAX_OCR_BYTES = "5000000"
 PAYMENT_MODE = "sandbox"
 ALLOW_LIVE_PAYMENTS = "false"
 
