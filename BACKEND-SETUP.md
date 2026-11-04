@@ -11,7 +11,7 @@ This release adds a real server-side foundation for TAMPslat. It is not producti
 - `POST /api/tools/csv/analyze` — authenticated CSV structure, duplicate, blank-cell and inconsistent-column analysis.
 - `POST /api/tools/ocr` — optional authenticated image OCR using a Cloudflare Workers AI binding; rejects unsupported types and oversized files.
 - `GET/POST /api/work`, `DELETE /api/work/:id` — account-scoped cloud work-item metadata/content persistence.
-- `GET /api/billing/summary` — account plan and AI credit ledger summary.
+- `GET /api/billing/summary` — account plan, expiry, provider and AI credit ledger summary.\n- `POST /api/billing/checkout` — server-priced Flutterwave or Paddle checkout; provider is selected from Cloudflare country data, not browser input.\n- `GET /api/billing/verify` — verifies Flutterwave return references against the provider API before applying entitlements.\n- `POST /api/webhooks/flutterwave` and `POST /api/webhooks/paddle` — signed webhook handling, provider verification, event idempotency and paid plan/credit grants.
 
 ## 1. Create a Cloudflare D1 database
 
@@ -51,7 +51,42 @@ The default model is `gpt-4.1-mini`; change `AI_MODEL` in `wrangler.toml` only t
 
 Optional OCR: enable Workers AI for your Cloudflare account and add the appropriate AI binding to the Worker configuration. The selected model is `@cf/microsoft/trocr-base-printed`; verify model availability in your account/region before relying on it. Browser OCR remains available as a local fallback.
 
-## 3. Run and deploy
+## 3. Configure sandbox payments (do not use live credentials for testing)
+
+The payment integration is deliberately **sandbox-first**. The Worker defaults to `PAYMENT_MODE=sandbox` unless you explicitly set it to `live`. Do not switch to live until sandbox tests, webhook delivery, entitlement checks and refund/cancellation handling have been reviewed.
+
+Add sandbox credentials as Cloudflare Worker secrets. Wrangler prompts for each value; never paste secret values into GitHub or frontend files:
+
+```bash
+npx wrangler secret put flutterwave_secret_key_sandbox
+npx wrangler secret put flutterwave_webhook_secret_hash_sandbox
+npx wrangler secret put paddle_api_key_sandbox
+npx wrangler secret put paddle_webhook_secret_sandbox
+```
+
+Configure these webhook destinations in the provider dashboards:
+
+- Flutterwave: `https://tampslat.tampconsulting.space/api/webhooks/flutterwave` and set the webhook secret hash to the same sandbox value stored as `flutterwave_webhook_secret_hash_sandbox`.
+- Paddle sandbox: `https://tampslat.tampconsulting.space/api/webhooks/paddle`; store that notification destination's endpoint secret as `paddle_webhook_secret_sandbox`.
+
+The backend derives prices from its own server-side catalogue. It ignores browser-supplied amounts and provider selection. Nigeria uses Flutterwave hosted checkout with card, bank transfer and USSD options where the merchant account/provider makes them available. Flutterwave plan purchases currently grant 30 days and require manual renewal so those local payment methods remain available; they are not auto-renewing subscriptions. Paddle plans use monthly recurring checkout. AI credit packs are one-time purchases.
+
+The new `backend/migrations/0002_billing.sql` adds billing orders, subscription metadata and webhook idempotency. **Do not deploy the billing Worker or accept payments before applying the migration**:
+
+```bash
+npx wrangler d1 migrations apply tampslat-db --remote
+```
+
+For local testing, apply to the local D1 database instead:
+
+```bash
+npx wrangler d1 migrations apply tampslat-db --local
+```
+
+The payment flow is not yet approved for live charges. Test using provider sandbox cards/accounts, verify successful and failed payments, duplicate webhooks, mismatched amounts/currencies, insufficient credits and plan expiry before changing `PAYMENT_MODE` to `live`. Live mode uses the existing `flutterwave_secret_key`, `flutterwave_webhook_secret_hash`, and `paddle_api_key` secrets plus a new `paddle_webhook_secret` secret.
+
+## 4. Run and deploy
+
 
 ```bash
 npx wrangler dev
@@ -71,7 +106,7 @@ npx wrangler deploy
 
 The included frontend client calls `/api` on the same origin. If the Worker uses a separate hostname, edit `backend-client.js` and change `const base = String(window.TAMPSLAT_API_BASE || '').replace(/\/$/, '');` to use your API origin, e.g. `const base = 'https://your-api-host.example';` and configure CORS with that exact origin.
 
-## 4. Test the account and AI flow
+## 5. Test the account and AI flow
 
 ```bash
 curl -i -X POST http://127.0.0.1:8787/api/auth/signup \
@@ -85,7 +120,7 @@ The signup response sets an HttpOnly session cookie. Use a cookie-aware browser 
 
 - **Email verification and password reset are not implemented yet.** Add a transactional email provider and expiring one-time tokens before public launch. The current recovery/change-password pages remain UI only.
 - **Google OAuth is not implemented yet.** Remove or label the Google buttons until OAuth credentials and callback/session validation are configured.
-- **Payments are not connected.** Paddle and Flutterwave checkout/webhook verification, subscription state changes, refunds and paid credit grants must be implemented and tested before accepting money. Never grant paid credits based on a browser redirect.
+- **Payments are sandbox-ready but not live-approved.** Flutterwave/Paddle checkout creation, server-side verification, signed webhooks and idempotent plan/credit grants are implemented. The migration and sandbox credentials/webhook destinations still need to be configured and tested. Flutterwave plans currently renew manually for 30-day access; Paddle plans use recurring monthly billing. Refund automation, provider-side subscription cancellation controls and full billing lifecycle QA remain open. Never grant value based on a browser redirect.
 - **Admin role provisioning is not included.** Do not expose `admin.html` as a real admin console; its current values are demo data.
 - **Data at rest:** D1 is account-scoped, but user work content currently has no application-level encryption. Do not store highly sensitive client, identity, medical, financial-account or confidential business documents until retention, deletion, backup and encryption policies are decided.
 - **File processing:** PDF/ZIP transformations remain primarily browser-side. CSV analysis API accepts CSV text (up to 1.5 MB). OCR endpoint supports image files only; scanned PDF OCR and full cloud file vault are not yet implemented.
