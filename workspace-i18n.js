@@ -60,18 +60,55 @@ Object.assign(phrases.ar,{
 "The text preview could not be loaded.":"تعذر تحميل معاينة النص.",
 "Preview is not available for this format yet. File name, type and size are shown above; the selected studio may still support processing or export.":"المعاينة غير متاحة لهذا التنسيق بعد. يظهر اسم الملف ونوعه وحجمه أعلاه؛ وقد يظل الاستوديو المحدد يدعم المعالجة أو التصدير."
 });
-const originals=new WeakMap();function apply(lang){const d=phrases[lang]||{};document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){const p=n.parentElement;if(!p||['SCRIPT','STYLE','TEXTAREA','INPUT'].includes(p.tagName))continue;const original=originals.get(n)||n.nodeValue;originals.set(n,original);const trimmed=original.trim();if(d[trimmed])n.nodeValue=original.replace(trimmed,d[trimmed]);else n.nodeValue=original}try{localStorage.setItem('tampslat-language',lang)}catch{}}
+const originals=new WeakMap(),lastText=new WeakMap(),attrOriginals=new WeakMap(),attrLast=new WeakMap();
+function apply(lang){
+  const d=phrases[lang]||{};
+  document.documentElement.lang=lang;
+  document.documentElement.dir=lang==='ar'?'rtl':'ltr';
+  if(document.body)document.body.dir=lang==='ar'?'rtl':'ltr';
+  const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+  let n;
+  while(n=w.nextNode()){
+    const p=n.parentElement;
+    if(!p||['SCRIPT','STYLE','TEXTAREA','INPUT'].includes(p.tagName)||p.closest('[data-no-translate]'))continue;
+    const current=n.nodeValue,last=lastText.get(n);
+    if(last!==current)originals.set(n,current);
+    const original=originals.has(n)?originals.get(n):current,trimmed=original.trim();
+    const translated=d[trimmed],desired=translated?original.replace(trimmed,translated):original;
+    if(current!==desired)n.nodeValue=desired;
+    lastText.set(n,desired);
+  }
+  try{localStorage.setItem('tampslat-language',lang)}catch{}
+}
 const languageControls='[data-studio-language],#language,#publicLanguage,#authLanguage,#vaultLanguage,.lang-mini';
-const attrOriginals=new WeakMap();
 function syncControls(lang){document.querySelectorAll(languageControls).forEach(s=>{if([...s.options].some(o=>o.value===lang))s.value=lang;});}
-function applyEverywhere(lang){if(!phrases[lang])lang='en';apply(lang);syncControls(lang);document.querySelectorAll('[placeholder],[title],[aria-label]').forEach(el=>{const attrs=['placeholder','title','aria-label'];attrs.forEach(a=>{const value=el.getAttribute(a);if(!value)return;let saved=attrOriginals.get(el);if(!saved){saved={};attrOriginals.set(el,saved)}if(!(a in saved))saved[a]=value;const original=saved[a];const translated=(phrases[lang]||{})[original];el.setAttribute(a,translated||original);});});}
+function applyAttributes(lang){
+  const d=phrases[lang]||{},attrs=['placeholder','title','aria-label','alt','aria-placeholder'];
+  document.querySelectorAll('[placeholder],[title],[aria-label],[alt],[aria-placeholder]').forEach(el=>{
+    let saved=attrOriginals.get(el);if(!saved){saved={};attrOriginals.set(el,saved)}
+    let last=attrLast.get(el);if(!last){last={};attrLast.set(el,last)}
+    attrs.forEach(a=>{
+      if(!el.hasAttribute(a))return;
+      const current=el.getAttribute(a);
+      if(last[a]!==current)saved[a]=current;
+      const original=saved[a],desired=d[original]||original;
+      if(current!==desired)el.setAttribute(a,desired);
+      last[a]=desired;
+    });
+  });
+}
+function applyEverywhere(lang){if(!phrases[lang])lang='en';apply(lang);syncControls(lang);applyAttributes(lang);}
 window.TAMPSlatApplyLanguage=applyEverywhere;
 let lang=(()=>{try{return localStorage.getItem('tampslat-language')||'en'}catch{return'en'}})();
 document.querySelectorAll(languageControls).forEach(s=>s.addEventListener('change',()=>{lang=s.value||'en';applyEverywhere(lang);window.dispatchEvent(new CustomEvent('tampslat-language-change',{detail:{lang}}));}));
 window.addEventListener('tampslat-language-change',e=>{lang=e.detail?.lang||lang;applyEverywhere(lang)});
 window.addEventListener('storage',e=>{if(e.key==='tampslat-language'){lang=e.newValue||'en';applyEverywhere(lang)}});
 applyEverywhere(lang);
-let queued=false;const observer=new MutationObserver(()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;applyEverywhere((()=>{try{return localStorage.getItem('tampslat-language')||'en'}catch{return'en'}})())})});
-observer.observe(document.body,{childList:true,subtree:true});
-document.addEventListener('click',e=>{if(e.target.closest('.module,.ops-type,[data-tab],button'))setTimeout(()=>applyEverywhere((()=>{try{return localStorage.getItem('tampslat-language')||'en'}catch{return'en'}})()),80)});
+let queued=false;
+const observer=new MutationObserver(()=>{
+  if(queued)return;queued=true;
+  requestAnimationFrame(()=>{queued=false;let current='en';try{current=localStorage.getItem('tampslat-language')||'en'}catch{}applyEverywhere(current)});
+});
+observer.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['placeholder','title','aria-label','alt','aria-placeholder']});
+document.addEventListener('click',e=>{if(e.target.closest('.module,.ops-type,[data-tab],button'))setTimeout(()=>{let current='en';try{current=localStorage.getItem('tampslat-language')||'en'}catch{}applyEverywhere(current)},80)});
 })();
