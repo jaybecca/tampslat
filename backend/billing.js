@@ -136,8 +136,8 @@ async function paddleWebhook(req,env){
   if(!eventId)return fail('Missing Paddle event ID.');
   if(event.event_type==='transaction.completed'){
     const orderId=data.custom_data?.order_id;
-    if(!orderId)return json({received:true,ignored:true});
-    const order=await env.DB.prepare("SELECT * FROM billing_orders WHERE id=? AND provider='paddle'").bind(String(orderId)).first();
+    let order=orderId?await env.DB.prepare("SELECT * FROM billing_orders WHERE id=? AND provider='paddle'").bind(String(orderId)).first():null;
+    if(!order&&data.subscription_id){order=await env.DB.prepare("SELECT * FROM billing_orders WHERE provider='paddle' AND kind='plan' AND user_id=(SELECT id FROM users WHERE billing_subscription_id=?) ORDER BY paid_at DESC LIMIT 1").bind(String(data.subscription_id)).first();}
     if(!order)return json({received:true,ignored:true});
     const subtotal=Number(data.details?.totals?.subtotal);
     if(data.status!=='completed'||String(data.currency_code).toUpperCase()!==order.currency||!Number.isFinite(subtotal)||subtotal!==order.amount_minor)return fail('Paddle transaction did not match the expected order.',409);
