@@ -4,6 +4,8 @@ ALTER TABLE users ADD COLUMN plan_expires_at TEXT;
 ALTER TABLE users ADD COLUMN billing_provider TEXT;
 ALTER TABLE users ADD COLUMN billing_subscription_id TEXT;
 
+CREATE INDEX IF NOT EXISTS idx_users_billing_subscription ON users(billing_subscription_id) WHERE billing_subscription_id IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS billing_orders (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
