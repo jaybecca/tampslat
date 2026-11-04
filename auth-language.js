@@ -16,9 +16,10 @@ ar:{
 const textOriginals=new WeakMap(),attributeOriginals=new WeakMap();
 function translateTree(root,lang){
  const map=words[lang]||{};
- const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
- let node;
- while((node=walker.nextNode())){
+ const nodes=[];
+ if(root.nodeType===3)nodes.push(root);
+ else{const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let node;while((node=walker.nextNode()))nodes.push(node);}
+ for(const node of nodes){
   const parent=node.parentElement;
   if(!parent||['SCRIPT','STYLE'].includes(parent.tagName))continue;
   const original=textOriginals.has(node)?textOriginals.get(node):node.nodeValue;
