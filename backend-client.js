@@ -11,6 +11,8 @@
     request,
     health:()=>request('/health',{headers:{}}),
     signup:(email,password)=>request('/auth/signup',{method:'POST',body:JSON.stringify({email,password})}),
+    recover:(email)=>request('/auth/recover',{method:'POST',body:JSON.stringify({email})}),
+    updatePassword:(accessToken,password)=>request('/auth/update-password',{method:'POST',body:JSON.stringify({accessToken,password})}),
     login:(email,password)=>request('/auth/login',{method:'POST',body:JSON.stringify({email,password})}),
     logout:()=>request('/auth/logout',{method:'POST',body:'{}'}),
     me:()=>request('/auth/me',{headers:{}}),
