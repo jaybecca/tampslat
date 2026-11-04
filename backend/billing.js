@@ -2,7 +2,7 @@ const enc = new TextEncoder();
 const json = (data, status=200) => new Response(JSON.stringify(data), {status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
 const fail = (message,status=400) => json({error:message},status);
 const id = () => crypto.randomUUID();
-const AFRICAN = new Set('NG GH KE ZA UG TZ RW ZM MW SN CI CM ET EG MA DZ TN AO MZ BW NA LS SZ GM SL LR BJ TG BF NE ML GN GW CD CG GA GQ CF TD SD SS SO DJ ER BI KM'.split(' '));
+const AFRICAN = new Set('DZ AO BJ BW BF BI CV CM CF TD KM CG CD CI DJ EG GQ ER SZ ET GA GM GH GN GW KE LS LR LY MG MW ML MR MU MA MZ NA NE NG RW ST SN SC SL SO ZA SS SD TZ TG TN UG ZM ZW'.split(' '));
 const PLANS = {
   starter:{NGN:2000,USD:2,GBP:2,EUR:2,CAD:3},
   pro:{NGN:5000,USD:5,GBP:5,EUR:5,CAD:7},
