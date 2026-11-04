@@ -1,10 +1,10 @@
-name = "tampslat-api"
+name = 'tampslat'
 main = "backend/worker.js"
 compatibility_date = "2026-10-28"
 workers_dev = true
 
 [vars]
-APP_ORIGIN = "https://YOUR-TAMPSLAT-DOMAIN.example"
+APP_ORIGIN = "https://tampslat.tampconsulting.space"
 AI_PROVIDER = "openai"
 AI_MODEL = "gpt-4.1-mini"
 FREE_AI_CREDITS = "5"
@@ -15,8 +15,17 @@ MAX_OCR_BYTES = "5000000"
 [[d1_databases]]
 binding = "DB"
 database_name = "tampslat-db"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "3399d02b-9b82-4575-b7b1-e428b5c782b2"
 migrations_dir = "backend/migrations"
+
+# Optional: configure Workers AI for OCR if you have enabled the binding.
+# [ai]
+# binding = "AI"
+
+# Required production secret (set with `npx wrangler secret put OPENAI_API_KEY`).
+# Never put provider keys in [vars], HTML, browser storage, or admin.html.
+[secrets]
+required = ["OPENAI_API_KEY"]
 
 [[r2_buckets]]
 binding = "FILES"
@@ -25,6 +34,3 @@ bucket_name = "tampslat-files"
 [assets]
 directory = "."
 run_worker_first = ["/api/*"]
-
-[secrets]
-required = ["OPENAI_API_KEY"]
