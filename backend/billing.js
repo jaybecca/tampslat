@@ -51,7 +51,7 @@ async function createCheckout(req,env,user){
   try{await env.DB.prepare('SELECT id FROM billing_orders LIMIT 1').first()}catch{return fail('Billing database is not ready. Apply migration 0002_billing.sql before enabling checkout.',503)}
   const data=await readJson(req);if(!data)return fail('Invalid checkout request.');
   const kind=String(data.kind||'plan').toLowerCase(),plan=String(data.plan||'').toLowerCase();
-  const quantity=Math.max(1,Math.min(10000,Math.floor(Number(data.quantity)||1)));
+  const quantity=kind==='credits'?Math.max(1,Math.min(10000,Math.floor(Number(data.quantity)||1))):1;
   if(kind==='plan'&&(!PLANS[plan]||plan==='free'))return fail('Choose a valid paid plan.');
   if(kind!=='plan'&&kind!=='credits')return fail('Unsupported purchase type.');
   const country=countryOf(req),africa=AFRICAN.has(country),provider=africa?'flutterwave':'paddle';
