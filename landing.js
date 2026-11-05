@@ -149,7 +149,7 @@ function renderCredit(){
  if(totalEl)totalEl.textContent=money(total,currency);
  if(unitEl)unitEl.textContent=money(rate,currency)+' '+tr('creditPrice');
 }
-function openWorkspace(){location.assign('login.html?next=tools.html');}
+async function openWorkspace(){try{const session=await window.TAMPSLAT_API?.me();if(session?.user){location.assign('tools.html');return;}}catch(e){}location.assign('login.html?next=tools.html');}
 
 let activePolicy=null;function showPolicy(which){const body=policyBodies[which];if(!body)return;activePolicy=which;$('#policyContent').innerHTML=body[lang]||body.en;$('#policyPanel').hidden=false;$('#policyPanel').scrollIntoView({behavior:'smooth',block:'start'});}
 $$('[data-policy]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();showPolicy(a.dataset.policy)}));$('#closePolicy').onclick=()=>{$('#policyPanel').hidden=true;location.hash='support'};
