@@ -72,7 +72,7 @@ async function createCheckout(req,env,user){
   await env.DB.prepare('INSERT INTO billing_orders(id,user_id,provider,kind,plan,quantity,currency,amount_minor,billing_cycle,status) VALUES(?,?,?,?,?,?,?,?,?,\'pending\')').bind(order.id,order.user_id,order.provider,order.kind,order.plan,order.quantity,order.currency,order.amount_minor,order.billing_cycle).run();
   try{
     if(provider==='flutterwave'){
-      const key=flutterwaveKey(env);if(!key)throw Object.assign(new Error('Flutterwave sandbox credentials are not configured. Add flutterwave_secret_key_sandbox before testing checkout.'),{status:503});
+      const key=flutterwaveKey(env);if(!key)throw Object.assign(new Error('Flutterwave checkout is temporarily unavailable. No payment was taken. Please try again later or contact Support.'),{status:503});
       const txRef='tampslat_'+orderId.replace(/-/g,'');
       const paymentOptions=country==='NG'&&currency==='NGN'?'card,banktransfer,ussd':'card';
       const response=await fetch('https://api.flutterwave.com/v3/payments',{method:'POST',headers:{authorization:'Bearer '+key,'content-type':'application/json',accept:'application/json'},body:JSON.stringify({
@@ -86,7 +86,7 @@ async function createCheckout(req,env,user){
       await env.DB.prepare('UPDATE billing_orders SET provider_ref=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(txRef,orderId).run();
       return json({checkoutUrl:result.data.link,provider,orderId,renewal:kind==='plan'?(billingCycle==='annual'?'manual-annual':'manual-monthly'):'one-time'});
     }
-    const key=paddleKey(env);if(!key)throw Object.assign(new Error('Paddle sandbox credentials are not configured. Add paddle_api_key_sandbox before testing checkout.'),{status:503});
+    const key=paddleKey(env);if(!key)throw Object.assign(new Error('Paddle checkout is temporarily unavailable. No payment was taken. Please try again later or contact Support.'),{status:503});
     const base=paymentMode(env)==='live'?'https://api.paddle.com':'https://sandbox-api.paddle.com';
     const productName=kind==='credits'?'TAMPslat AI credits':'TAMPslat '+plan[0].toUpperCase()+plan.slice(1);
     const price={description:kind==='credits'?'One-time AI credit pack':(billingCycle==='annual'?'Annual TAMPslat software subscription':'Monthly TAMPslat software subscription'),name:kind==='credits'?'One-time':(billingCycle==='annual'?'Annual':'Monthly'),billing_cycle:kind==='credits'?null:{interval:billingCycle==='annual'?'year':'month',frequency:1},unit_price:{amount:String(amountMinor),currency_code:currency},product:{name:productName,description:kind==='credits'?'AI assistance credit top-up for TAMPslat.':'Subscription access to the TAMPslat business productivity workspace.',tax_category:'saas'}};
@@ -105,7 +105,7 @@ async function createCheckout(req,env,user){
   }
 }
 async function verifyFlutterwave(env,transactionId){
-  const key=flutterwaveKey(env);if(!key)throw new Error('Flutterwave verification is not configured.');
+  const key=flutterwaveKey(env);if(!key)throw new Error('Payment verification is temporarily unavailable.');
   const response=await fetch('https://api.flutterwave.com/v3/transactions/'+encodeURIComponent(String(transactionId))+'/verify',{headers:{authorization:'Bearer '+key,accept:'application/json'}});
   const result=await response.json().catch(()=>({}));
   if(!response.ok||result.status!=='success'||!result.data)throw new Error('Flutterwave could not verify this payment.');
@@ -136,7 +136,7 @@ async function flutterwaveWebhook(req,env){
   return json({received:true});
 }
 async function paddleWebhook(req,env){
-  const secret=paddleWebhookKey(env);if(!secret)return fail('Paddle webhook verification is not configured.',503);
+  const secret=paddleWebhookKey(env);if(!secret)return fail('Payment verification is temporarily unavailable.',503);
   const raw=await req.text(),header=req.headers.get('Paddle-Signature')||'';
   const fields=header.split(';').map(x=>x.trim().split('='));
   const ts=Number(fields.find(x=>x[0]==='ts')?.[1]),signatures=fields.filter(x=>x[0]==='h1').map(x=>x[1]);
