@@ -42,3 +42,5 @@ body.dark .template-card b,body.dark .seo-article h2,body.dark .seo-article h3{c
 body.dark .template-card p,body.dark .seo-article p,body.dark .template-tip{color:#c2cbe0!important}
 body.dark .template-editor textarea{background:#111b2d!important;color:#f6f7ff!important;border-color:#7180a0!important}
 @media(max-width:720px){.upgrade-header{position:relative}.upgrade-header nav a{padding:7px 9px;border:1px solid #e2e5ef;border-radius:9px;background:#f8f9fd}body.dark .upgrade-header nav a{background:#253149;border-color:#53617a;color:#fff!important}}
+
+body.upgrade-page.dark{background:#111a2b!important;color:#f5f7ff!important}
