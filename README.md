@@ -52,13 +52,14 @@ The checkout interface offers Paddle for international payments and Flutterwave 
 
 OpenAI and Google Gemini are identified as intended AI providers, but live AI generation and credit consumption are **not connected** in this static MVP. A production implementation needs a server-side API proxy, secret management, usage limits, error handling and server-side credit ledger.
 
-### Before public launch
-
-- Review the starter policies with a qualified adviser for Nigeria, the UK, the US and other target markets.
-- Confirm tax, renewal/cancellation, refund and digital-content rules with Paddle/Flutterwave.
-- Implement authentication, a database, account-based synchronisation, payment webhooks and server-side credit accounting if the product will be sold as a hosted SaaS.
-- Test country detection, language changes, mobile layouts, policy links and all checkout states on real devices.
-
+### Remaining production-readiness work
+- Configure and test Flutterwave secrets, webhook delivery and D1 migration using the steps in [PAYMENTS-USAGE-SETUP.md](PAYMENTS-USAGE-SETUP.md). The server-side checkout and verification routes are implemented; live payments remain inactive until merchant credentials and migration are configured.
+- Add transactional email verification and password-reset flows before relying on email as the sole account recovery method.
+- Configure Google OAuth credentials and callback/session validation, or keep OAuth buttons hidden.
+- Provision and audit admin roles before exposing an admin console.
+- Decide application-level encryption, retention, deletion, backups and export controls before storing highly sensitive client or identity documents.
+- Complete full cloud file-vault/R2 quota accounting and scanned-PDF OCR if those capabilities are to be advertised.
+- Run browser, mobile, accessibility, security and provider sandbox tests before enabling live payment credentials.
 
 ## Latest merged release
 This package combines the public home, pricing, policy pages and workspace. It includes updated TAMPslat logo assets/favicon, workspace currency selector (USD, EUR, GBP, NGN, CAD), profile dropdown, multicolour overview cards, and sign-in/create-account UI pages. Authentication, Google OAuth, payments, cloud vault and live AI remain unconnected until provider credentials and backend services are configured.
