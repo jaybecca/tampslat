@@ -28,6 +28,35 @@ async function rateLimit(env, key, limit, seconds) {
   const row=await env.DB.prepare('SELECT count FROM rate_limits WHERE bucket=?').bind(bucket).first();
   return (row?.count||0)<=limit;
 }
+const PLAN_LIMITS = Object.freeze({
+  free: { saved_work: 3, ocr: 10, csv_analysis: 10 },
+  starter: { saved_work: 100, ocr: 100, csv_analysis: 100 },
+  pro: { saved_work: 500, ocr: 500, csv_analysis: 500 },
+  business: { saved_work: 2000, ocr: 2000, csv_analysis: 2000 }
+});
+const usagePeriod = () => new Date().toISOString().slice(0,7);
+async function reserveUsage(env,user,feature) {
+  const period=usagePeriod(),limit=PLAN_LIMITS[user.plan]?.[feature]??PLAN_LIMITS.free[feature];
+  const row=await env.DB.prepare('INSERT INTO usage_counters(user_id,period_key,feature,used) VALUES(?,?,?,1) ON CONFLICT(user_id,period_key,feature) DO UPDATE SET used=used+1,updated_at=CURRENT_TIMESTAMP WHERE used < ? RETURNING used').bind(user.id,period,feature,limit).first();
+  return row?{period,limit,used:Number(row.used)}:null;
+}
+async function releaseUsage(env,user,feature,period) {
+  await env.DB.prepare('UPDATE usage_counters SET used=MAX(0,used-1),updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND period_key=? AND feature=?').bind(user.id,period,feature).run();
+}
+async function recordUsage(env,user,feature,period,metadata={}) {
+  await env.DB.prepare('INSERT INTO usage_events(id,user_id,period_key,feature,metadata_json) VALUES(?,?,?,?,?)').bind(uid(),user.id,period,feature,JSON.stringify(metadata)).run();
+}
+async function usageSnapshot(env,user) {
+  const period=usagePeriod(),limits=PLAN_LIMITS[user.plan]||PLAN_LIMITS.free;
+  const results=await Promise.all([
+    env.DB.prepare('SELECT feature,used FROM usage_counters WHERE user_id=? AND period_key=?').bind(user.id,period).all(),
+    env.DB.prepare("SELECT COUNT(*) AS requests,COALESCE(SUM(-amount),0) AS credits_spent FROM credit_ledger WHERE user_id=? AND event_type IN ('ai_usage','ai_refinement') AND substr(created_at,1,7)=?").bind(user.id,period).first()
+  ]);
+  const usage={saved_work:0,ocr:0,csv_analysis:0};
+  for(const row of results[0].results||[])if(Object.prototype.hasOwnProperty.call(usage,row.feature))usage[row.feature]=Number(row.used)||0;
+  const ai=results[1]||{};
+  return {plan:user.plan,period,periodTimezone:'UTC',limits,usage,ai:{requests:Number(ai.requests)||0,creditsSpent:Number(ai.credits_spent)||0},credits:Number(user.credits_balance)||0};
+}
 async function currentUser(req, env) {
   const token=cookie(req,'tampslat_session'); if(!token)return null;
   const hash=await sha256(token), now=Math.floor(Date.now()/1000);
@@ -146,12 +175,17 @@ function parseCsv(text) {
 async function csvAnalyze(req, env, user) {
   const data=await bodyJson(req,2_000_000); if(!data)return fail('Invalid JSON.'); const csv=String(data.csv||'');
   if(!csv.trim())return fail('Provide CSV content.'); if(csv.length>1_500_000)return fail('CSV is too large for this endpoint.');
-  if(!await rateLimit(env,`csv:${user.id}`,60,3600))return fail('Processing limit reached. Try again later.',429);
-  const rows=parseCsv(csv), headers=rows[0]||[], body=rows.slice(1), width=headers.length;
-  const duplicates=new Set(); let duplicateRows=0; for(const r of body){const key=JSON.stringify(r);if(duplicates.has(key))duplicateRows++;else duplicates.add(key);}
-  const blankByColumn=headers.map((h,i)=>({column:h||`Column ${i+1}`,blank:body.filter(r=>!String(r[i]??'').trim()).length}));
-  const inconsistent=body.filter(r=>r.length!==width).length;
-  return json({filename:String(data.filename||'data.csv').slice(0,120),rows:body.length,columns:width,headers,duplicateRows,rowsWithInconsistentColumnCount:inconsistent,blankByColumn,preview:rows.slice(0,6),note:'Analysis only. The original file was not modified.'});
+  if(!await rateLimit(env,'csv:'+user.id,60,3600))return fail('Hourly processing limit reached. Please try again later.',429);
+  const reservation=await reserveUsage(env,user,'csv_analysis');
+  if(!reservation)return fail('You have reached this month’s CSV quality-check allowance for your plan. Your allowance resets on the first day of next month (UTC).',429);
+  try {
+    const rows=parseCsv(csv), headers=rows[0]||[], body=rows.slice(1), width=headers.length;
+    const duplicates=new Set(); let duplicateRows=0; for(const r of body){const key=JSON.stringify(r);if(duplicates.has(key))duplicateRows++;else duplicates.add(key);}
+    const blankByColumn=headers.map((h,i)=>({column:h||('Column '+(i+1)),blank:body.filter(r=>!String(r[i]??'').trim()).length}));
+    const inconsistent=body.filter(r=>r.length!==width).length;
+    await recordUsage(env,user,'csv_analysis',reservation.period,{rows:body.length,columns:width});
+    return json({filename:String(data.filename||'data.csv').slice(0,120),rows:body.length,columns:width,headers,duplicateRows,rowsWithInconsistentColumnCount:inconsistent,blankByColumn,preview:rows.slice(0,6),note:'Analysis only. The original file was not modified.',usage:{used:reservation.used,limit:reservation.limit,period:reservation.period}});
+  } catch(error) { await releaseUsage(env,user,'csv_analysis',reservation.period); throw error; }
 }
 async function ocr(req, env, user) {
   if(!env.AI||typeof env.AI.run!=='function')return fail('OCR backend is not configured. Add a Cloudflare Workers AI binding named AI, or continue using the browser-based OCR tool.',503);
@@ -159,9 +193,16 @@ async function ocr(req, env, user) {
   const form=await req.formData(), file=form.get('file'); if(!file||typeof file.arrayBuffer!=='function')return fail('Choose an image file.');
   const max=Number(env.MAX_OCR_BYTES||5000000); if(file.size>max)return fail(`File exceeds the ${Math.round(max/1024/1024)} MB limit.`,413);
   if(!/^image\/(png|jpeg|webp|gif|bmp|tiff)$/i.test(file.type))return fail('Supported image types: PNG, JPEG, WebP, GIF, BMP and TIFF.');
-  if(!await rateLimit(env,`ocr:${user.id}`,30,3600))return fail('OCR request limit reached. Try again later.',429);
-  try { const bytes=new Uint8Array(await file.arrayBuffer()); const result=await env.AI.run('@cf/microsoft/trocr-base-printed',{image:[...bytes]}); const text=String(result?.text||result?.data?.[0]?.text||''); return json({text,filename:file.name||'image',reviewRequired:true}); }
-  catch(e){return fail('OCR processing failed. Check the Workers AI model availability and try again.',502);}
+  if(!await rateLimit(env,'ocr:'+user.id,30,3600))return fail('Hourly OCR request limit reached. Please try again later.',429);
+  const reservation=await reserveUsage(env,user,'ocr');
+  if(!reservation)return fail('You have reached this month’s OCR allowance for your plan. Your allowance resets on the first day of next month (UTC).',429);
+  try {
+    const bytes=new Uint8Array(await file.arrayBuffer());
+    const result=await env.AI.run('@cf/microsoft/trocr-base-printed',{image:[...bytes]});
+    const text=String(result?.text||result?.data?.[0]?.text||'');
+    await recordUsage(env,user,'ocr',reservation.period,{bytes:file.size,mimeType:file.type});
+    return json({text,filename:file.name||'image',reviewRequired:true,usage:{used:reservation.used,limit:reservation.limit,period:reservation.period}});
+  } catch(e) { await releaseUsage(env,user,'ocr',reservation.period); return fail('OCR processing failed. Check the Workers AI model availability and try again. No monthly usage was charged.',502); }
 }
 async function route(req, env) {
   const url=new URL(req.url), path=url.pathname;
@@ -252,7 +293,7 @@ async function route(req, env) {
     const [totals,plans,credits]=await Promise.all([
       env.DB.prepare("SELECT COUNT(*) AS users, SUM(CASE WHEN plan='free' THEN 1 ELSE 0 END) AS free_users, SUM(CASE WHEN plan!='free' THEN 1 ELSE 0 END) AS paid_users FROM users").first(),
       env.DB.prepare("SELECT plan,COUNT(*) AS count FROM users GROUP BY plan").all(),
-      env.DB.prepare("SELECT COALESCE(SUM(CASE WHEN amount<0 THEN -amount ELSE 0 END),0) AS consumed FROM credit_ledger WHERE event_type='ai_usage'").first()
+      env.DB.prepare("SELECT COALESCE(SUM(CASE WHEN amount<0 THEN -amount ELSE 0 END),0) AS consumed FROM credit_ledger WHERE event_type IN ('ai_usage','ai_refinement')").first()
     ]);
     await env.DB.prepare("INSERT INTO audit_events(id,user_id,event_type,detail_json) VALUES(?,?,?,?)").bind(uid(),user.id,'admin.analytics.viewed','{}').run();
     return json({totals:totals||{},plans:plans.results||[],credits:credits||{},generatedAt:new Date().toISOString()});
@@ -261,12 +302,17 @@ async function route(req, env) {
   if(path==='/api/ai/refine'&&req.method==='POST')return aiRefine(req,env,user);
   if(path==='/api/tools/csv/analyze'&&req.method==='POST')return csvAnalyze(req,env,user);
   if(path==='/api/tools/ocr'&&req.method==='POST')return ocr(req,env,user);
-  if(path==='/api/work'&&req.method==='GET'){const rows=await env.DB.prepare('SELECT id,kind,title,created_at,updated_at FROM work_items WHERE user_id=? ORDER BY updated_at DESC LIMIT 100').bind(user.id).all();return json({items:rows.results||[]});}
+  if(path==='/api/work'&&req.method==='GET'){const limit=PLAN_LIMITS[user.plan]?.saved_work||PLAN_LIMITS.free.saved_work;const rows=await env.DB.prepare('SELECT id,kind,title,created_at,updated_at FROM work_items WHERE user_id=? ORDER BY updated_at DESC LIMIT ?').bind(user.id,Math.min(2000,limit)).all();return json({items:rows.results||[],usage:await usageSnapshot(env,user)});}
   if(path==='/api/work'&&req.method==='POST'){
-    const d=await bodyJson(req,100000);if(!d)return fail('Invalid JSON.');const kind=String(d.kind||'note').slice(0,40),title=String(d.title||'Untitled work').trim().slice(0,160),content=JSON.stringify(d.content??{});if(content.length>80000)return fail('Work item is too large.');const id=uid();await env.DB.prepare('INSERT INTO work_items(id,user_id,kind,title,content_json) VALUES(?,?,?,?,?)').bind(id,user.id,kind,title,content).run();return json({id,title,kind},201);
-  }
-  if(path.startsWith('/api/work/')&&req.method==='DELETE'){const id=path.split('/').pop();const result=await env.DB.prepare('DELETE FROM work_items WHERE id=? AND user_id=?').bind(id,user.id).run();return result.meta?.changes?json({ok:true}):fail('Work item not found.',404);}
-  if(path==='/api/billing/summary'&&req.method==='GET'){const ledger=await env.DB.prepare('SELECT amount,event_type,description,created_at FROM credit_ledger WHERE user_id=? ORDER BY created_at DESC LIMIT 50').bind(user.id).all();const latest=await env.DB.prepare('SELECT provider,kind,plan,status,created_at,paid_at FROM billing_orders WHERE user_id=? ORDER BY created_at DESC LIMIT 1').bind(user.id).first();const paymentMode=String(env.PAYMENT_MODE||'sandbox').toLowerCase(),paymentsEnabled=paymentMode==='live'?env.ALLOW_LIVE_PAYMENTS==='true'&&Boolean(env.flutterwave_secret_key||env.paddle_api_key):Boolean(env.flutterwave_secret_key_sandbox||env.paddle_api_key_sandbox);return json({plan:user.plan,planExpiresAt:user.plan_expires_at||null,billingProvider:user.billing_provider||null,credits:user.credits_balance,ledger:ledger.results||[],latestOrder:latest||null,paymentsEnabled,paymentMode});}
+    const d=await bodyJson(req,100000);if(!d)return fail('Invalid JSON.');const kind=String(d.kind||'note').slice(0,40),title=String(d.title||'Untitled work').trim().slice(0,160),content=JSON.stringify(d.content??{});if(content.length>80000)return fail('Work item is too large.');
+    const reservation=await reserveUsage(env,user,'saved_work');
+    if(!reservation)return fail('You have reached this month’s saved-work allowance for your plan. Your allowance resets on the first day of next month (UTC).',429);
+    const id=uid();
+    try { await env.DB.prepare('INSERT INTO work_items(id,user_id,kind,title,content_json) VALUES(?,?,?,?,?)').bind(id,user.id,kind,title,content).run();await recordUsage(env,user,'saved_work',reservation.period,{kind});return json({id,title,kind,usage:{used:reservation.used,limit:reservation.limit,period:reservation.period}},201); }
+    catch(error){await releaseUsage(env,user,'saved_work',reservation.period);throw error;}
+  }  if(path.startsWith('/api/work/')&&req.method==='DELETE'){const id=path.split('/').pop();const result=await env.DB.prepare('DELETE FROM work_items WHERE id=? AND user_id=?').bind(id,user.id).run();return result.meta?.changes?json({ok:true}):fail('Work item not found.',404);}
+  if(path==='/api/usage/summary'&&req.method==='GET')return json(await usageSnapshot(env,user));
+  if(path==='/api/billing/summary'&&req.method==='GET'){const ledger=await env.DB.prepare('SELECT amount,event_type,description,created_at FROM credit_ledger WHERE user_id=? ORDER BY created_at DESC LIMIT 50').bind(user.id).all();const latest=await env.DB.prepare('SELECT provider,kind,plan,status,created_at,paid_at FROM billing_orders WHERE user_id=? ORDER BY created_at DESC LIMIT 1').bind(user.id).first();const paymentMode=String(env.PAYMENT_MODE||'sandbox').toLowerCase(),paymentsEnabled=paymentMode==='live'?env.ALLOW_LIVE_PAYMENTS==='true'&&Boolean(env.flutterwave_secret_key||env.paddle_api_key):Boolean(env.flutterwave_secret_key_sandbox||env.paddle_api_key_sandbox);return json({plan:user.plan,planExpiresAt:user.plan_expires_at||null,billingProvider:user.billing_provider||null,credits:user.credits_balance,usage:await usageSnapshot(env,user),ledger:ledger.results||[],latestOrder:latest||null,paymentsEnabled,paymentMode});}
   return fail('Endpoint not found.',404);
 }
 export default { async fetch(req,env) { try { const res=await route(req,env); const headers=new Headers(res.headers); for(const [k,v] of Object.entries(corsHeaders(req,env)))headers.set(k,v); headers.set('X-Content-Type-Options','nosniff');headers.set('Referrer-Policy','strict-origin-when-cross-origin');headers.set('X-Frame-Options','DENY');return new Response(res.body,{status:res.status,statusText:res.statusText,headers}); } catch(e) { const url=new URL(req.url); console.error('TAMPslat request failed', {method:req.method,path:url.pathname,name:e?.name,message:e?.message,stack:e?.stack}); return json({error:'Unexpected server error.'},500); } } };
