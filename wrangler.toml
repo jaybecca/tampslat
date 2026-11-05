@@ -5,6 +5,8 @@ workers_dev = true
 
 [vars]
 APP_ORIGIN = "https://tampslat.tampconsulting.space"
+SUPABASE_URL = "https://qqfmsvepxxagszzhhjap.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_zxfcbavvt1HnL1mPiO_zzA_4l9YoG56"
 AI_PROVIDER = "openai"
 AI_MODEL = "gpt-4.1-mini"
 FREE_AI_CREDITS = "5"
