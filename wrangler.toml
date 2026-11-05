@@ -10,17 +10,12 @@ AI_MODEL = "gpt-4.1-mini"
 FREE_AI_CREDITS = "5"
 AI_CREDIT_COST = "1"
 MAX_AI_INPUT_CHARS = "12000"
-MAX_OCR_BYTES = "5000000"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "tampslat-db"
 database_id = "3399d02b-9b82-4575-b7b1-e428b5c782b2"
 migrations_dir = "backend/migrations"
-
-# Optional: configure Workers AI for OCR if you have enabled the binding.
-# [ai]
-# binding = "AI"
 
 # Required production secret (set with `npx wrangler secret put OPENAI_API_KEY`).
 # Never put provider keys in [vars], HTML, browser storage, or admin.html.
@@ -54,9 +49,6 @@ ALLOW_LIVE_PAYMENTS = "false"
 binding = "DB"
 database_name = "tampslat-preview-db"
 database_id = "fa458da0-8ac2-45c8-844b-c08010c8645a"
-
-[previews.ai]
-binding = "ai_providers"
 
 [[previews.r2_buckets]]
 binding = "FILES"
