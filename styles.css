@@ -112,3 +112,6 @@ body.dark .public-product b{color:#f4f5ff}
 body.dark .public-product p{color:#c0c7e2}
 body.dark .tiny-theme-toggle{background:#252b46;color:#fbbf24;border-color:#596080}
 @media(max-width:600px){.tiny-theme-toggle{width:26px;height:26px;min-width:26px;font-size:14px}}
+
+/* Mobile public navigation: use compact, scrollable action chips rather than bare links. */
+@media(max-width:720px){.public-nav nav{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;justify-content:flex-start!important;gap:8px!important;padding:8px 0 5px!important;scrollbar-width:thin}.public-nav nav a{flex:0 0 auto;padding:9px 12px;border:1px solid #d8deec;border-radius:10px;background:#f7f8fc;white-space:nowrap;font-weight:800}.public-nav nav a:hover{background:#ece8ff;border-color:#b9adf3}body.dark .public-nav nav a{background:#253149;border-color:#53617a;color:#fff!important}}
