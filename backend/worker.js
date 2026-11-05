@@ -304,7 +304,7 @@ async function route(req, env) {
   if(path==='/api/ai/refine'&&req.method==='POST')return aiRefine(req,env,user);
   if(path==='/api/tools/csv/analyze'&&req.method==='POST')return csvAnalyze(req,env,user);
   if(path==='/api/tools/ocr'&&req.method==='POST')return ocr(req,env,user);
-  if(path==='/api/work'&&req.method==='GET'){const limit=PLAN_LIMITS[user.plan]?.saved_work||PLAN_LIMITS.free.saved_work;const rows=await env.DB.prepare('SELECT id,kind,title,created_at,updated_at FROM work_items WHERE user_id=? ORDER BY updated_at DESC LIMIT ?').bind(user.id,Math.min(2000,limit)).all();return json({items:rows.results||[],usage:await usageSnapshot(env,user)});}
+  if(path==='/api/work'&&req.method==='GET'){const rows=await env.DB.prepare('SELECT id,kind,title,created_at,updated_at FROM work_items WHERE user_id=? ORDER BY updated_at DESC LIMIT 5000').bind(user.id).all();return json({items:rows.results||[],usage:await usageSnapshot(env,user)});}
   if(path==='/api/work'&&req.method==='POST'){
     const d=await bodyJson(req,100000);if(!d)return fail('Invalid JSON.');const kind=String(d.kind||'note').slice(0,40),title=String(d.title||'Untitled work').trim().slice(0,160),content=JSON.stringify(d.content??{});if(content.length>80000)return fail('Work item is too large.');
     const reservation=await reserveUsage(env,user,'saved_work');
