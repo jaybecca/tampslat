@@ -20,6 +20,8 @@
     listWork:()=>request('/work',{headers:{}}),
     saveWork:(kind,title,content)=>request('/work',{method:'POST',body:JSON.stringify({kind,title,content})}),
     billing:()=>request('/billing/summary',{headers:{}}),
+    usage:()=>request('/usage/summary',{headers:{}}),
+    consumeUsage:(feature,units=1)=>request('/usage/consume',{method:'POST',body:JSON.stringify({feature,units})}),
     adminOverview:()=>request('/admin/overview',{headers:{}})
   };
 })();
