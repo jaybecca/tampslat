@@ -115,3 +115,10 @@ body.dark .tiny-theme-toggle{background:#252b46;color:#fbbf24;border-color:#5960
 
 /* Mobile public navigation: use compact, scrollable action chips rather than bare links. */
 @media(max-width:720px){.public-nav nav{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;justify-content:flex-start!important;gap:8px!important;padding:8px 0 5px!important;scrollbar-width:thin}.public-nav nav a{flex:0 0 auto;padding:9px 12px;border:1px solid #d8deec;border-radius:10px;background:#f7f8fc;white-space:nowrap;font-weight:800}.public-nav nav a:hover{background:#ece8ff;border-color:#b9adf3}body.dark .public-nav nav a{background:#253149;border-color:#53617a;color:#fff!important}}
+
+/* Public homepage dark mode: high contrast logo, navigation, controls and mobile link chips. */
+body.dark .public-nav{background:#151e32!important;border-bottom:1px solid #3d4b65!important}
+body.dark .public-nav nav a{color:#f0f4ff!important}
+body.dark .public-nav-actions select{background:#202b40!important;color:#f4f6ff!important;border-color:#53617a!important}
+body.dark .public-nav .btn.secondary{background:#273149!important;color:#fff!important;border-color:#56627c!important}
+body.dark .public-nav .public-brand img{background:#fff!important;border-radius:10px!important;padding:5px!important}
