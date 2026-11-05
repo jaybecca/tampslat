@@ -16,7 +16,7 @@ window.TAMPSLAT_PLANS={
       "10 OCR pages and 10 CSV analyses per month",
       "15 exports per month",
       "Core PDF, ZIP, spreadsheet and document tools",
-      "Selected core studios and editable starter templates",
+      "100 editable starter templates and core studio tools",
       "Self-service support guides"
     ],
     "desc_translations": {
@@ -33,7 +33,7 @@ window.TAMPSLAT_PLANS={
         "10 pages OCR et 10 analyses CSV par mois",
         "15 exports par mois",
         "Outils PDF, ZIP, tableur et documents essentiels",
-        "Studios essentiels et modèles de démarrage modifiables",
+        "100 modèles de démarrage modifiables et outils essentiels",
         "Guides d’assistance en libre-service"
       ],
       "pt": [
@@ -43,7 +43,7 @@ window.TAMPSLAT_PLANS={
         "10 páginas OCR e 10 análises CSV por mês",
         "15 exportações por mês",
         "Ferramentas essenciais de PDF, ZIP, folhas de cálculo e documentos",
-        "Estúdios essenciais e modelos iniciais editáveis",
+        "100 modelos iniciais editáveis e ferramentas essenciais",
         "Guias de suporte de autoajuda"
       ],
       "es": [
@@ -53,7 +53,7 @@ window.TAMPSLAT_PLANS={
         "10 páginas OCR y 10 análisis CSV al mes",
         "15 exportaciones al mes",
         "Herramientas esenciales de PDF, ZIP, hojas de cálculo y documentos",
-        "Estudios esenciales y plantillas iniciales editables",
+        "100 plantillas iniciales editables y herramientas esenciales",
         "Guías de soporte de autoservicio"
       ],
       "ar": [
@@ -63,7 +63,7 @@ window.TAMPSLAT_PLANS={
         "10 صفحات OCR و10 تحليلات CSV شهريًا",
         "15 عملية تصدير شهريًا",
         "أدوات PDF وZIP وجداول البيانات والمستندات الأساسية",
-        "استوديوهات أساسية وقوالب بداية قابلة للتحرير",
+        "100 قالب بداية قابل للتحرير وأدوات أساسية",
         "أدلة دعم ذاتي"
       ]
     }
