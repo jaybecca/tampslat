@@ -98,6 +98,10 @@ Object.assign(phrases.fr,{"TAMPslat Studios":"Studios TAMPslat","TAMPslat Tools 
 Object.assign(phrases.pt,{"TAMPslat Studios":"Estúdios TAMPslat","TAMPslat Tools — Digital and Ready":"Ferramentas TAMPslat — Digital and Ready"});
 Object.assign(phrases.es,{"TAMPslat Studios":"Estudios TAMPslat","TAMPslat Tools — Digital and Ready":"Herramientas TAMPslat — Digital and Ready"});
 Object.assign(phrases.ar,{"TAMPslat Studios":"استوديوهات TAMPslat","TAMPslat Tools — Digital and Ready":"أدوات TAMPslat — جاهزة رقميًا"});
+Object.assign(phrases.fr,{"✦ TAMPSLAT CREATIVE CONTROLS":"✦ COMMANDES CRÉATIVES TAMPSLAT"});
+Object.assign(phrases.pt,{"✦ TAMPSLAT CREATIVE CONTROLS":"✦ CONTROLOS CRIATIVOS TAMPSLAT"});
+Object.assign(phrases.es,{"✦ TAMPSLAT CREATIVE CONTROLS":"✦ CONTROLES CREATIVOS TAMPSLAT"});
+Object.assign(phrases.ar,{"✦ TAMPSLAT CREATIVE CONTROLS":"✦ عناصر التحكم الإبداعية في TAMPSLAT"});
 const originalPageTitle=document.title;
 const originals=new WeakMap(),lastText=new WeakMap(),attrOriginals=new WeakMap(),attrLast=new WeakMap();
 function apply(lang){
