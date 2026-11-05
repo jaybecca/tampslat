@@ -183,7 +183,11 @@ body.dark .public-footer>span{color:#66728a}
 }
 @media(max-width:720px){
  .public-nav{min-height:0;height:auto;padding:12px 16px;gap:10px}
- .public-brand img{width:155px;max-width:43vw;min-width:0}
+ .public-brand img{width:125px;max-width:36vw;min-width:0}
+ .public-nav-actions{gap:4px}
+ .public-nav-actions select{padding:7px 4px;font-size:9px}
+ .public-nav .btn{padding:8px 7px;font-size:9px}
+ .public-nav .tiny-theme-toggle{width:27px;height:27px;min-width:27px;font-size:14px}
  .public-nav nav{order:3;width:100%;justify-content:space-between;gap:9px;padding:8px 0 1px}
  .public-nav nav a{font-size:11px}
  .public-nav-actions{margin-left:auto}
