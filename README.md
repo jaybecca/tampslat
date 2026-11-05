@@ -173,3 +173,31 @@ See `PDF-SPREADSHEET-ARCHIVE-ENGINE-RELEASE.md` for the exact feature boundaries
 - **Known engine gap:** this ZIP does not include `services/document-converter/` or `services/font-compiler/`, although `docker-compose.yml` references them. The dedicated document conversion service and CFF font compiler cannot be built until those source folders are restored.
 - Account signup/sign-in and AI credit accounting have Worker routes, but password reset/change email delivery, Google OAuth, live subscriptions and payment entitlements are not fully configured.
 - Privacy, Terms, Refund, AI Use and Cookie policies remain starter text and require qualified review for each market before paid launch.
+
+
+## Product content and entitlement clarification — November 2026
+
+This section supersedes earlier MVP/preview notes above where they conflict with the newer backend and product implementation. The repository still requires environment-specific deployment and payment verification before production use.
+
+### Editable template library
+- `template-library.html` provides 100 editable starting points across Business, Career, Finance, Operations, Marketing, Sales, People & HR, Education, Creative and Technology.
+- Edit document text directly in the browser, reset a selected template, download an editable HTML copy, or print/save to PDF.
+- `tools.html` retains the 10 featured starter templates and links to the full 100-template library.
+- Templates are practical starting points. Review legal, financial, HR and other regulated content for the relevant jurisdiction.
+
+### TAMPslat Journal
+- `blog/index.html` is the searchable/category-filtered blog index.
+- `blog/posts/` contains 58 individual article pages with unique titles, descriptions, canonical URLs and social metadata.
+- `sitemap.xml` lists the public home, pricing, workspace, support, template library, blog index and article URLs; `robots.txt` advertises the sitemap.
+- Review and expand article copy as the product evolves; SEO visibility is not guaranteed.
+
+### Plan expiry, monthly allowances and AI credits
+- Paid subscription access has a defined expiry. Flutterwave purchases in supported African countries grant 30 days and require manual renewal. Paddle subscriptions outside Africa renew monthly unless cancelled.
+- When paid access expires without renewal, the account is downgraded to the Free plan. Plan expiry does not delete the user's AI credit balance.
+- AI credits are a separate persistent balance. Credits are deducted for successful AI work, failed AI requests are refunded, and purchased credits do not expire when a month ends or a paid plan expires.
+- Account-save and server-side CSV quality-check allowances reset on the first day of each calendar month (UTC); unused monthly allowances do not roll over. Browser-local file processing, including OCR, is not metered.
+- The authoritative plan catalogue is `plans-data.js`; server-side billing and entitlement logic is in `backend/billing.js` and `backend/worker.js`. Do not change advertised limits without matching server-side enforcement.
+
+### Release safety
+- The current work is on a feature branch and is intended for review before merge. Run the DevSecOps workflow and complete preview browser, D1 migration and payment sandbox checks before enabling production payments or deploying.
+- Never place payment-provider or AI secrets in browser files. Keep them in the Worker environment and verify provider webhooks before granting plans or credits.
