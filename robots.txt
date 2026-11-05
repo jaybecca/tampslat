@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://tampslat.tampconsulting.space/sitemap.xml
