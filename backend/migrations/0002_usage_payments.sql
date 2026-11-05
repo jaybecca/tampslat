@@ -1,0 +1,8 @@
+PRAGMA foreign_keys = ON;
+ALTER TABLE users ADD COLUMN plan_expires_at TEXT;
+CREATE TABLE IF NOT EXISTS usage_counters(user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,feature TEXT NOT NULL,period_key TEXT NOT NULL,used INTEGER NOT NULL DEFAULT 0 CHECK(used>=0),updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,feature,period_key));
+CREATE INDEX IF NOT EXISTS idx_usage_period ON usage_counters(user_id,period_key);
+CREATE TABLE IF NOT EXISTS usage_events(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,feature TEXT NOT NULL,units INTEGER NOT NULL DEFAULT 1,period_key TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS idx_usage_events_user ON usage_events(user_id,created_at DESC);
+CREATE TABLE IF NOT EXISTS payment_attempts(id TEXT PRIMARY KEY,tx_ref TEXT NOT NULL UNIQUE,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,plan TEXT NOT NULL CHECK(plan IN ('starter','pro','business')),amount REAL NOT NULL,currency TEXT NOT NULL,provider TEXT NOT NULL DEFAULT 'flutterwave',status TEXT NOT NULL DEFAULT 'pending',checkout_url TEXT,provider_transaction_id TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,paid_at TEXT);
+CREATE INDEX IF NOT EXISTS idx_payment_user ON payment_attempts(user_id,created_at DESC);
