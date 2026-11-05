@@ -62,6 +62,18 @@
  }};
 
  Object.assign(supportMore.fr,{
+'When secure provider credentials and available AI credits are configured, AI can help draft and refine business documents, summarise content, interpret spreadsheet data and suggest workflows. Each request uses one monthly plan allowance and AI credits. Review all generated output before relying on it.':'Lorsque les identifiants sécurisés du fournisseur et les crédits IA sont configurés, l’IA peut aider à rédiger et améliorer des documents, résumer du contenu, interpréter des tableurs et proposer des flux de travail. Chaque requête utilise un quota mensuel et des crédits IA. Vérifiez tout résultat avant utilisation.'
+});
+Object.assign(supportMore.pt,{
+'When secure provider credentials and available AI credits are configured, AI can help draft and refine business documents, summarise content, interpret spreadsheet data and suggest workflows. Each request uses one monthly plan allowance and AI credits. Review all generated output before relying on it.':'Quando as credenciais seguras do fornecedor e os créditos de IA estão configurados, a IA pode ajudar a redigir e melhorar documentos, resumir conteúdo, interpretar folhas de cálculo e sugerir fluxos de trabalho. Cada pedido utiliza um limite mensal do plano e créditos de IA. Reveja os resultados antes de os utilizar.'
+});
+Object.assign(supportMore.es,{
+'When secure provider credentials and available AI credits are configured, AI can help draft and refine business documents, summarise content, interpret spreadsheet data and suggest workflows. Each request uses one monthly plan allowance and AI credits. Review all generated output before relying on it.':'Cuando se configuran las credenciales seguras del proveedor y hay créditos disponibles, la IA puede ayudar a redactar y mejorar documentos, resumir contenido, interpretar hojas de cálculo y sugerir flujos de trabajo. Cada solicitud consume un límite mensual del plan y créditos de IA. Revisa los resultados antes de utilizarlos.'
+});
+Object.assign(supportMore.ar,{
+'When secure provider credentials and available AI credits are configured, AI can help draft and refine business documents, summarise content, interpret spreadsheet data and suggest workflows. Each request uses one monthly plan allowance and AI credits. Review all generated output before relying on it.':'عند إعداد بيانات اعتماد المزود الآمنة وتوفر أرصدة الذكاء الاصطناعي، يمكن للذكاء الاصطناعي المساعدة في صياغة مستندات الأعمال وتحسينها وتلخيص المحتوى وتحليل الجداول واقتراح مسارات العمل. يستهلك كل طلب حصة شهرية وأرصدة ذكاء اصطناعي. راجع النتائج قبل الاعتماد عليها.'
+});
+Object.assign(supportMore.fr,{
  'How is my usage measured?':'Comment mon utilisation est-elle mesurée ?',
  'Monthly usage is measured by the account service for AI requests, OCR pages, CSV analyses, saved work and other server-backed actions. Browser-only tools process files locally where indicated. Open Usage & Limits to see this month’s counters. Limits reset on the first day of each calendar month in UTC.':'L’utilisation mensuelle est mesurée par le service pour les requêtes IA, les pages OCR, les analyses CSV, les travaux enregistrés et les autres actions côté serveur. Les outils du navigateur traitent localement les fichiers lorsque cela est indiqué. Consultez Utilisation et limites pour voir les compteurs du mois. Les limites sont réinitialisées le premier jour de chaque mois en UTC.',
  'How do AI credits work?':'Comment fonctionnent les crédits IA ?',
