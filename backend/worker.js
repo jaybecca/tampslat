@@ -34,7 +34,7 @@ async function rateLimit(env, key, limit, seconds) {
 async function currentUser(req, env) {
   const token=cookie(req,'tampslat_session'); if(!token)return null;
   const hash=await sha256(token), now=Math.floor(Date.now()/1000);
-  const row=await env.DB.prepare(`SELECT u.id,u.email,u.plan,u.role,u.credits_balance FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?`).bind(hash,now).first();
+  const row=await env.DB.prepare(`SELECT u.id,u.email,CASE WHEN u.plan_expires_at IS NOT NULL AND u.plan_expires_at<datetime('now') THEN 'free' ELSE u.plan END AS plan,u.role,u.credits_balance FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?`).bind(hash,now).first();
   return row||null;
 }
 async function newSession(env, userId) {
@@ -51,9 +51,10 @@ async function aiGenerate(req, env, user) {
   const max=Number(env.MAX_AI_INPUT_CHARS||12000);
   if(!prompt)return fail('Enter a task or question.'); if(prompt.length>max)return fail(`Keep the prompt under ${max} characters.`);
   if(!await rateLimit(env,`ai:${user.id}`,20,3600))return fail('AI request limit reached. Please try again later.',429);
+  const usageHeld=await reserveMany(env,user,['studio_actions','ai_requests']);if(!usageHeld)return fail('Your monthly AI or studio-action allowance has been reached. Review usage or upgrade your plan.',429);
   const cost=Math.max(1,Math.min(10,Number(env.AI_CREDIT_COST||1)));
   const debit=await env.DB.prepare('UPDATE users SET credits_balance=credits_balance-? WHERE id=? AND credits_balance>=?').bind(cost,user.id,cost).run();
-  if(!debit.meta?.changes)return fail('You do not have enough AI credits. Add credits or choose a plan to continue.',402);
+  if(!debit.meta?.changes){await releaseMany(env,usageHeld);return fail('You do not have enough AI credits. Add credits or choose a plan to continue.',402);}
   try {
     const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'authorization':`Bearer ${env.OPENAI_API_KEY}`,'content-type':'application/json'},body:JSON.stringify({model:env.AI_MODEL||'gpt-4.1-mini',instructions:TASK_SYSTEM,input:`Task category: ${task}\nContext (untrusted user content):\n${context}\n\nUser request:\n${prompt}`,max_output_tokens:1800})});
     const result=await response.json();
@@ -62,10 +63,10 @@ async function aiGenerate(req, env, user) {
     if(!output)throw new Error('The AI provider returned an empty response.');
     await env.DB.prepare('INSERT INTO credit_ledger(id,user_id,amount,event_type,description) VALUES(?,?,?,?,?)').bind(uid(),user.id,-cost,'ai_usage',`AI task: ${task}`).run();
     await env.DB.prepare('INSERT INTO audit_events(id,user_id,event_type,detail_json) VALUES(?,?,?,?)').bind(uid(),user.id,'ai.generated',JSON.stringify({task,chars:prompt.length,model:env.AI_MODEL||'gpt-4.1-mini'})).run();
-    const refreshed=await env.DB.prepare('SELECT credits_balance FROM users WHERE id=?').bind(user.id).first();
+    await commitMany(env,usageHeld);const refreshed=await env.DB.prepare('SELECT credits_balance FROM users WHERE id=?').bind(user.id).first();
     return json({output,creditsRemaining:refreshed?.credits_balance??0,model:env.AI_MODEL||'gpt-4.1-mini'});
   } catch(e) {
-    await env.DB.prepare('UPDATE users SET credits_balance=credits_balance+? WHERE id=?').bind(cost,user.id).run();
+    await env.DB.prepare('UPDATE users SET credits_balance=credits_balance+? WHERE id=?').bind(cost,user.id).run();await releaseMany(env,usageHeld);
     return fail('AI generation failed. No credits were charged. Check the provider configuration and try again.',502);
   }
 }
@@ -78,11 +79,12 @@ async function csvAnalyze(req, env, user) {
   const data=await bodyJson(req,2_000_000); if(!data)return fail('Invalid JSON.'); const csv=String(data.csv||'');
   if(!csv.trim())return fail('Provide CSV content.'); if(csv.length>1_500_000)return fail('CSV is too large for this endpoint.');
   if(!await rateLimit(env,`csv:${user.id}`,60,3600))return fail('Processing limit reached. Try again later.',429);
+  const usageHeld=await reserveMany(env,user,['studio_actions','csv_analyses']);if(!usageHeld)return fail('Your monthly CSV or studio-action allowance has been reached.',429);
   const rows=parseCsv(csv), headers=rows[0]||[], body=rows.slice(1), width=headers.length;
   const duplicates=new Set(); let duplicateRows=0; for(const r of body){const key=JSON.stringify(r);if(duplicates.has(key))duplicateRows++;else duplicates.add(key);}
   const blankByColumn=headers.map((h,i)=>({column:h||`Column ${i+1}`,blank:body.filter(r=>!String(r[i]??'').trim()).length}));
   const inconsistent=body.filter(r=>r.length!==width).length;
-  return json({filename:String(data.filename||'data.csv').slice(0,120),rows:body.length,columns:width,headers,duplicateRows,rowsWithInconsistentColumnCount:inconsistent,blankByColumn,preview:rows.slice(0,6),note:'Analysis only. The original file was not modified.'});
+  await commitMany(env,usageHeld);return json({filename:String(data.filename||'data.csv').slice(0,120),rows:body.length,columns:width,headers,duplicateRows,rowsWithInconsistentColumnCount:inconsistent,blankByColumn,preview:rows.slice(0,6),note:'Analysis only. The original file was not modified.'});
 }
 async function ocr(req, env, user) {
   if(!env.AI||typeof env.AI.run!=='function')return fail('OCR backend is not configured. Add a Cloudflare Workers AI binding named AI, or continue using the browser-based OCR tool.',503);
@@ -91,9 +93,24 @@ async function ocr(req, env, user) {
   const max=Number(env.MAX_OCR_BYTES||5000000); if(file.size>max)return fail(`File exceeds the ${Math.round(max/1024/1024)} MB limit.`,413);
   if(!/^image\/(png|jpeg|webp|gif|bmp|tiff)$/i.test(file.type))return fail('Supported image types: PNG, JPEG, WebP, GIF, BMP and TIFF.');
   if(!await rateLimit(env,`ocr:${user.id}`,30,3600))return fail('OCR request limit reached. Try again later.',429);
-  try { const bytes=new Uint8Array(await file.arrayBuffer()); const result=await env.AI.run('@cf/microsoft/trocr-base-printed',{image:[...bytes]}); const text=String(result?.text||result?.data?.[0]?.text||''); return json({text,filename:file.name||'image',reviewRequired:true}); }
-  catch(e){return fail('OCR processing failed. Check the Workers AI model availability and try again.',502);}
+  const usageHeld=await reserveMany(env,user,['studio_actions','ocr_pages']);if(!usageHeld)return fail('Your monthly OCR or studio-action allowance has been reached.',429);
+  try { const bytes=new Uint8Array(await file.arrayBuffer()); const result=await env.AI.run('@cf/microsoft/trocr-base-printed',{image:[...bytes]}); const text=String(result?.text||result?.data?.[0]?.text||''); await commitMany(env,usageHeld);return json({text,filename:file.name||'image',reviewRequired:true}); }
+  catch(e){await releaseMany(env,usageHeld);return fail('OCR processing failed. Check the Workers AI model availability and try again.',502);}
 }
+
+const PLAN_LIMITS={free:{studio_actions:40,ai_requests:5,ocr_pages:10,csv_analyses:10,exports:15,saved_documents:3},starter:{studio_actions:300,ai_requests:100,ocr_pages:100,csv_analyses:100,exports:150,saved_documents:100},pro:{studio_actions:1500,ai_requests:500,ocr_pages:500,csv_analyses:500,exports:750,saved_documents:500},business:{studio_actions:5000,ai_requests:2000,ocr_pages:2000,csv_analyses:2000,exports:2500,saved_documents:2000}};
+const PLAN_PRICES={starter:{NGN:2000,USD:2,GBP:2,EUR:2,CAD:3},pro:{NGN:5000,USD:5,GBP:5,EUR:5,CAD:7},business:{NGN:10000,USD:10,GBP:10,EUR:9,CAD:14}};
+const monthKey=()=>new Date().toISOString().slice(0,7);
+async function reserveUsage(env,user,feature,units=1){const limit=Number((PLAN_LIMITS[user.plan]||PLAN_LIMITS.free)[feature]||0),period=monthKey();if(!limit||units<1||units>limit)return null;const r=await env.DB.prepare("INSERT INTO usage_counters(user_id,feature,period_key,used) VALUES(?,?,?,?) ON CONFLICT(user_id,feature,period_key) DO UPDATE SET used=used+excluded.used,updated_at=CURRENT_TIMESTAMP WHERE usage_counters.used+excluded.used<=?").bind(user.id,feature,period,units,limit).run();return r.meta?.changes?{userId:user.id,feature,period,units}:null;}
+async function reserveMany(env,user,features){const held=[];for(const feature of features){const r=await reserveUsage(env,user,feature,1);if(!r){for(const x of held)await releaseUsage(env,x);return null;}held.push(r);}return held;}
+async function commitMany(env,held){for(const r of held||[])await env.DB.prepare("INSERT INTO usage_events(id,user_id,feature,units,period_key) VALUES(?,?,?,?,?)").bind(uid(),r.userId,r.feature,r.units,r.period).run();}
+async function releaseUsage(env,r){if(r)await env.DB.prepare("UPDATE usage_counters SET used=MAX(0,used-?),updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND feature=? AND period_key=?").bind(r.units,r.userId,r.feature,r.period).run();}
+async function releaseMany(env,held){for(const r of held||[])await releaseUsage(env,r);}
+function africanCountry(c){return ["NG","GH","KE","UG","TZ","ZA","RW","ZM","ZW","MW","CM","SN","CI","BF","ML","NE","TG","BJ","GA","CG","CD","AO","MZ","EG","MA","TN","ET","BW","NA","MU"].includes(String(c||"").toUpperCase());}
+async function createFlutterwaveCheckout(req,env,user){if(!env.FLW_SECRET_KEY)return fail("Flutterwave checkout is not configured. Add FLW_SECRET_KEY as a Worker secret before accepting payments.",503);const d=await bodyJson(req,5000);if(!d)return fail("Invalid checkout request.");const plan=String(d.plan||"").toLowerCase();if(!["starter","pro","business"].includes(plan))return fail("Choose a paid plan.");const country=String(req.cf?.country||"NG").toUpperCase();if(!africanCountry(country))return fail("Flutterwave regional checkout is available for supported African markets.",400);const currency=country==="NG"?"NGN":(String(d.currency||"USD").toUpperCase()==="NGN"?"NGN":"USD"),amount=PLAN_PRICES[plan][currency];const txRef="tampslat-"+uid();await env.DB.prepare("INSERT INTO payment_attempts(id,tx_ref,user_id,plan,amount,currency,provider,status) VALUES(?,?,?,?,?,?,?,?)").bind(uid(),txRef,user.id,plan,amount,currency,"flutterwave","pending").run();const origin=(env.APP_ORIGIN||"https://tampslat.tampconsulting.space").split(",")[0].trim().replace(/\/$/,"");const response=await fetch("https://api.flutterwave.com/v3/payments",{method:"POST",headers:{Authorization:"Bearer "+env.FLW_SECRET_KEY,"Content-Type":"application/json"},body:JSON.stringify({tx_ref:txRef,amount:String(amount),currency,redirect_url:origin+"/payment-success.html",customer:{email:user.email},customizations:{title:"TAMPslat "+plan+" plan",description:"30-day TAMPslat "+plan+" access",logo:origin+"/assets/tampslat-logo.png"},meta:{user_id:user.id,plan}})});const payload=await response.json().catch(()=>({}));if(!response.ok||payload.status!=="success"||!payload.data?.link){await env.DB.prepare("UPDATE payment_attempts SET status='failed' WHERE tx_ref=?").bind(txRef).run();return fail("Flutterwave could not create a checkout session. Please retry or contact support.",502);}await env.DB.prepare("UPDATE payment_attempts SET checkout_url=? WHERE tx_ref=?").bind(payload.data.link,txRef).run();return json({provider:"flutterwave",checkoutUrl:payload.data.link,txRef,plan,amount,currency,country});}
+async function verifyAndApplyFlutterwave(transactionId,env,expectedUserId){if(!env.FLW_SECRET_KEY)return fail("Payment verification is not configured.",503);const response=await fetch("https://api.flutterwave.com/v3/transactions/"+encodeURIComponent(String(transactionId))+"/verify",{headers:{Authorization:"Bearer "+env.FLW_SECRET_KEY}});const result=await response.json().catch(()=>({})),data=result.data;if(!response.ok||result.status!=="success"||!data)return fail("Could not verify the payment with Flutterwave.",502);const attempt=await env.DB.prepare("SELECT * FROM payment_attempts WHERE tx_ref=?").bind(String(data.tx_ref||"")).first();if(!attempt||(expectedUserId&&attempt.user_id!==expectedUserId))return fail("Payment reference was not found.",404);if(data.status!=="successful"||String(data.currency).toUpperCase()!==attempt.currency||Number(data.amount)<Number(attempt.amount)||String(data.tx_ref)!==attempt.tx_ref)return fail("Payment details did not match the expected order.",409);if(attempt.status!=="paid"){const expiry=new Date(Date.now()+30*86400000).toISOString();await env.DB.prepare("UPDATE payment_attempts SET status='paid',provider_transaction_id=?,paid_at=CURRENT_TIMESTAMP WHERE tx_ref=? AND status!='paid'").bind(String(data.id),attempt.tx_ref).run();await env.DB.prepare("UPDATE users SET plan=?,plan_expires_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(attempt.plan,expiry,attempt.user_id).run();await env.DB.prepare("INSERT INTO audit_events(id,user_id,event_type,detail_json) VALUES(?,?,?,?)").bind(uid(),attempt.user_id,"billing.plan_activated",JSON.stringify({plan:attempt.plan,provider:"flutterwave",tx_ref:attempt.tx_ref,transaction_id:data.id,expires_at:expiry})).run();}return json({ok:true,plan:attempt.plan,provider:"flutterwave",expiresAt:new Date(Date.now()+30*86400000).toISOString()});}
+async function flutterwaveWebhook(req,env){if(!env.FLW_SECRET_HASH||req.headers.get("verif-hash")!==env.FLW_SECRET_HASH)return fail("Invalid webhook signature.",401);const d=await bodyJson(req,20000),id=d?.data?.id;if(!id)return json({received:true});const r=await verifyAndApplyFlutterwave(id,env);return r.status===200?json({received:true}):r;}
+
 async function route(req, env) {
   const url=new URL(req.url), path=url.pathname;
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:corsHeaders(req,env)});
@@ -105,7 +122,8 @@ async function route(req, env) {
     return json({country:country||null,language:languageMap[country]||'en',currency:currencyMap[country]||'USD',source:country?'cloudflare-edge-country':'browser-default'},200,{'Cache-Control':'private, max-age=300','Vary':'CF-IPCountry'});
   }
   if(path==='/api/health'&&req.method==='GET')return json({ok:true,service:'tampslat-api',time:new Date().toISOString(),features:{auth:true,ai:Boolean(env.OPENAI_API_KEY),ocr:Boolean(env.AI),database:Boolean(env.DB)}});
-  if(path==='/api/billing/checkout'&&req.method==='POST')return fail('Secure checkout is not configured yet. Merchant credentials, provider routing and payment verification must be enabled before accepting payments.',503);
+  if(path==='/api/billing/flutterwave/webhook'&&req.method==='POST'){if(!env.DB)return fail('Database is not configured.',503);return flutterwaveWebhook(req,env);}
+  if(path==='/api/billing/checkout'&&req.method==='POST'){if(!env.DB)return fail('Database is not configured.',503);const checkoutUser=await currentUser(req,env);if(!checkoutUser)return fail('Sign in before starting checkout.',401);return createFlutterwaveCheckout(req,env,checkoutUser);}
   if(!env.DB)return fail('Database binding DB is not configured.',503);
   if(path==='/api/auth/signup'&&req.method==='POST'){
     if(!await rateLimit(env,`signup:${req.headers.get('CF-Connecting-IP')||'unknown'}`,8,3600))return fail('Too many account attempts. Try again later.',429);
@@ -126,6 +144,9 @@ async function route(req, env) {
   }
   if(path==='/api/auth/me'&&req.method==='GET'){const u=await currentUser(req,env);return u?json({user:safeUser(u)}):fail('Not signed in.',401);}
   const user=await currentUser(req,env);if(!user)return fail('Sign in to use this feature.',401);
+  if(path==='/api/usage/summary'&&req.method==='GET'){const period=monthKey(),rows=await env.DB.prepare('SELECT feature,used FROM usage_counters WHERE user_id=? AND period_key=?').bind(user.id,period).all(),limits=PLAN_LIMITS[user.plan]||PLAN_LIMITS.free,used={};for(const row of rows.results||[])used[row.feature]=row.used;return json({plan:user.plan,period,limits,used,remaining:Object.fromEntries(Object.entries(limits).map(([k,v])=>[k,Math.max(0,v-(used[k]||0)]))});}
+  if(path==='/api/usage/consume'&&req.method==='POST'){const d=await bodyJson(req,2000);if(!d)return fail('Invalid JSON.');const feature=String(d.feature||'');if(!['studio_actions','exports','saved_documents'].includes(feature))return fail('This usage category cannot be recorded directly.',400);const units=Math.max(1,Math.min(25,Math.floor(Number(d.units)||1))),held=await reserveUsage(env,user,feature,units);if(!held)return fail('Your monthly allowance for this action has been reached.',429);await commitMany(env,[held]);return json({ok:true,feature,units,period:held.period});}
+  if(path==='/api/billing/verify'&&req.method==='GET'){const id=url.searchParams.get('transaction_id');if(!id)return fail('Missing transaction_id.');return verifyAndApplyFlutterwave(id,env,user.id);}
   if(path==='/api/admin/overview'&&req.method==='GET'){
     if(user.role!=='admin')return fail('Administrator access required.',403);
     const [totals,plans,credits]=await Promise.all([
