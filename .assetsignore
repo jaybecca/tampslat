@@ -1,0 +1,14 @@
+node_modules/
+.git/
+.github/
+.wrangler/
+backend/
+.env
+.env.*
+.dev.vars*
+package.json
+package-lock.json
+bun.lock
+bun.lockb
+npm-shrinkwrap.json
+wrangler.toml

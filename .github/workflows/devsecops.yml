@@ -1,32 +1,39 @@
 name: TAMPslat DevSecOps
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
+
 permissions:
   contents: read
   security-events: write
+
 jobs:
   validate:
+    name: Application validation and security scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
       - name: Validate Worker and browser engines
         run: |
           node --check backend/worker.js
           node --check backend-client.js
           node --check site-locale.js
           node --check workspace-i18n.js
+          node --check auth-language.js
           node --check engines/ai-refinement-client.js
           node --check engines/studio-design-engine.js
           node --check app.js
           node --check landing.js
-      - name: Scan filesystem for vulnerabilities, misconfiguration and secrets
+
+      - name: Trivy security scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
@@ -36,6 +43,87 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: '1'
+
       - name: Dependency review
         if: github.event_name == 'pull_request'
         uses: actions/dependency-review-action@v4
+
+  docker-smoke:
+    name: Docker build and service smoke tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start service containers
+        run: docker compose up --build -d
+
+      - name: Verify services
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8788/health >/dev/null && curl -fsS http://127.0.0.1:8790/health >/dev/null; then
+              echo "Both service containers are healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose ps
+          docker compose logs --no-color
+          exit 1
+
+      - name: Stop containers
+        if: always()
+        run: docker compose down -v
+
+  minikube-smoke:
+    name: Minikube Kubernetes deployment smoke test
+    runs-on: ubuntu-latest
+    needs: [docker-smoke]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start Minikube
+        uses: medyagh/setup-minikube@v0.0.21
+        with:
+          driver: docker
+          container-runtime: docker
+
+      - name: Build images inside Minikube
+        run: |
+          eval "$(minikube docker-env)"
+          docker build -t tampslat-document-converter:ci ./services/document-converter
+          docker build -t tampslat-font-compiler:ci ./services/font-compiler
+
+      - name: Deploy services
+        run: |
+          kubectl create deployment document-converter --image=tampslat-document-converter:ci --port=8788
+          kubectl create deployment font-compiler --image=tampslat-font-compiler:ci --port=8790
+          kubectl set env deployment/document-converter PORT=8788 MAX_UPLOAD_BYTES=52428800
+          kubectl set env deployment/font-compiler PORT=8790
+          kubectl patch deployment document-converter --type=json -p='[{"op":"replace","path":"/spec/template/spec/containers/0/imagePullPolicy","value":"Never"}]'
+          kubectl patch deployment font-compiler --type=json -p='[{"op":"replace","path":"/spec/template/spec/containers/0/imagePullPolicy","value":"Never"}]'
+          kubectl expose deployment document-converter --port=8788 --target-port=8788
+          kubectl expose deployment font-compiler --port=8790 --target-port=8790
+          kubectl rollout status deployment/document-converter --timeout=180s
+          kubectl rollout status deployment/font-compiler --timeout=180s
+
+      - name: Verify Kubernetes services
+        run: |
+          kubectl port-forward service/document-converter 18788:8788 >/tmp/document-converter.log 2>&1 &
+          kubectl port-forward service/font-compiler 18790:8790 >/tmp/font-compiler.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18788/health >/dev/null && curl -fsS http://127.0.0.1:18790/health >/dev/null; then
+              echo "Both Kubernetes services are healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          kubectl get pods,services
+          kubectl describe pods
+          exit 1
+
+      - name: Collect Kubernetes diagnostics
+        if: failure()
+        run: |
+          kubectl get all -o wide || true
+          kubectl describe pods || true
+          kubectl logs -l app=document-converter --all-containers=true || true
+          kubectl logs -l app=font-compiler --all-containers=true || true

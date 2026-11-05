@@ -1,4 +1,4 @@
-/* Canonical public plan catalogue. Keep homepage and pricing claims in sync. */
+/* Canonical four-tier public plan catalogue. Homepage and pricing page read this same source. */
 window.TAMPSLAT_PLANS={
   "free": {
     "name": "Free",
@@ -9,53 +9,53 @@ window.TAMPSLAT_PLANS={
       "EUR": 0,
       "CAD": 0
     },
-    "desc": "Explore the essentials before upgrading.",
+    "desc": "Explore essential tools and studio previews before upgrading.",
     "features": [
       "3 saved business documents per month",
-      "Starter proposal, quotation and brief templates",
+      "Essential proposal, quotation and invoice templates",
+      "Basic PDF, ZIP and spreadsheet tools",
       "Personal client list for up to 10 contacts",
       "Basic pricing and profit calculator",
-      "One local workspace saved on this device",
-      "Self-service help centre"
+      "Explore studio previews before upgrading"
     ],
     "desc_translations": {
-      "fr": "Découvrez les essentiels avant de passer à une offre supérieure.",
-      "pt": "Explore o essencial antes de atualizar.",
-      "es": "Explora lo esencial antes de mejorar tu plan.",
-      "ar": "استكشف الأساسيات قبل الترقية."
+      "fr": "Découvrez les outils essentiels et les aperçus des studios avant de passer à une offre supérieure.",
+      "pt": "Explore ferramentas essenciais e pré-visualizações dos estúdios antes de atualizar.",
+      "es": "Explora herramientas esenciales y vistas previas de los estudios antes de mejorar tu plan.",
+      "ar": "استكشف الأدوات الأساسية ومعاينات الاستوديو قبل الترقية."
     },
     "feature_translations": {
       "fr": [
         "3 documents professionnels enregistrés par mois",
-        "Modèles de base pour propositions, devis et briefs",
+        "Modèles essentiels de propositions, devis et factures",
+        "Outils PDF, ZIP et tableur de base",
         "Liste personnelle de 10 contacts maximum",
-        "Calculateur de tarifs et de bénéfices de base",
-        "Un espace de travail local enregistré sur cet appareil",
-        "Centre d’aide en libre-service"
+        "Calculateur de tarifs et bénéfices de base",
+        "Aperçu des studios avant la mise à niveau"
       ],
       "pt": [
         "3 documentos empresariais guardados por mês",
-        "Modelos iniciais de propostas, orçamentos e resumos",
+        "Modelos essenciais de propostas, orçamentos e faturas",
+        "Ferramentas básicas de PDF, ZIP e folhas de cálculo",
         "Lista pessoal de até 10 contactos",
         "Calculadora básica de preços e lucros",
-        "Um espaço de trabalho local guardado neste dispositivo",
-        "Centro de ajuda de autoatendimento"
+        "Pré-visualize os estúdios antes de atualizar"
       ],
       "es": [
         "3 documentos empresariales guardados al mes",
-        "Plantillas iniciales de propuestas, presupuestos y resúmenes",
+        "Plantillas esenciales de propuestas, presupuestos y facturas",
+        "Herramientas básicas de PDF, ZIP y hojas de cálculo",
         "Lista personal de hasta 10 contactos",
         "Calculadora básica de precios y beneficios",
-        "Un espacio de trabajo local guardado en este dispositivo",
-        "Centro de ayuda de autoservicio"
+        "Explora los estudios antes de mejorar tu plan"
       ],
       "ar": [
         "3 مستندات أعمال محفوظة شهريًا",
-        "قوالب أولية للمقترحات وعروض الأسعار والملخصات",
+        "قوالب أساسية للمقترحات وعروض الأسعار والفواتير",
+        "أدوات PDF وZIP وجداول البيانات الأساسية",
         "قائمة شخصية تضم حتى 10 جهات اتصال",
         "حاسبة أساسية للأسعار والأرباح",
-        "مساحة عمل محلية واحدة محفوظة على هذا الجهاز",
-        "مركز مساعدة ذاتي الخدمة"
+        "استكشف معاينات الاستوديو قبل الترقية"
       ]
     }
   },
@@ -68,52 +68,62 @@ window.TAMPSLAT_PLANS={
       "EUR": 2,
       "CAD": 3
     },
-    "desc": "Create polished client-ready documents with your own business identity.",
+    "desc": "Create polished business documents and establish a consistent brand.",
     "features": [
-      "Unlimited business-document drafts and saved records",
-      "Proposal, quotation, invoice, CV, cover-letter and report templates",
+      "Unlimited document drafts and saved business records",
+      "Full Document & Business Studio templates and exports",
+      "PDF, ZIP, spreadsheet and OCR tools",
+      "Document Converter Studio access (conversion engine required)",
+      "Font Studio access for brand-ready typography",
       "Client tracker for up to 100 contacts",
       "Custom business profile, logo details and brand colours",
-      "Downloadable text and print-ready document exports",
       "Email support"
     ],
     "desc_translations": {
-      "fr": "Créez des documents professionnels prêts pour vos clients avec votre identité.",
-      "pt": "Crie documentos profissionais prontos para clientes com a sua identidade.",
-      "es": "Crea documentos profesionales para clientes con tu propia identidad.",
-      "ar": "أنشئ مستندات احترافية للعملاء بهويتك الخاصة."
+      "fr": "Créez des documents professionnels soignés et établissez une identité de marque cohérente.",
+      "pt": "Crie documentos empresariais profissionais e estabeleça uma marca consistente.",
+      "es": "Crea documentos empresariales profesionales y establece una marca coherente.",
+      "ar": "أنشئ مستندات أعمال احترافية وهوية علامة تجارية متسقة."
     },
     "feature_translations": {
       "fr": [
-        "Brouillons et dossiers de documents professionnels enregistrés sans limite",
-        "Modèles de propositions, devis, factures, CV, lettres de motivation et rapports",
+        "Brouillons de documents et dossiers professionnels illimités",
+        "Modèles et exports complets du Studio Documents et Affaires",
+        "Outils PDF, ZIP, tableur et OCR",
+        "Accès au Studio de conversion (moteur requis)",
+        "Accès à Font Studio pour la typographie de marque",
         "Suivi de 100 contacts maximum",
-        "Profil d’entreprise personnalisé, informations de logo et couleurs de marque",
-        "Export de textes téléchargeables et de documents prêts à imprimer",
+        "Profil d’entreprise, logo et couleurs personnalisés",
         "Assistance par e-mail"
       ],
       "pt": [
-        "Rascunhos e registos de documentos empresariais ilimitados",
-        "Modelos de propostas, orçamentos, faturas, CV, cartas de apresentação e relatórios",
+        "Rascunhos e registos empresariais ilimitados",
+        "Modelos e exportações completos do Estúdio de Documentos e Negócios",
+        "Ferramentas de PDF, ZIP, folhas de cálculo e OCR",
+        "Acesso ao Estúdio de conversão (requer motor)",
+        "Acesso ao Font Studio para tipografia de marca",
         "Gestor de até 100 contactos",
-        "Perfil empresarial, dados do logótipo e cores da marca personalizados",
-        "Exportação de texto e documentos prontos para impressão",
+        "Perfil empresarial, logótipo e cores personalizados",
         "Suporte por e-mail"
       ],
       "es": [
-        "Borradores y registros de documentos empresariales ilimitados",
-        "Plantillas de propuestas, presupuestos, facturas, CV, cartas de presentación e informes",
+        "Borradores y registros empresariales ilimitados",
+        "Plantillas y exportaciones completas del Estudio de Documentos y Negocio",
+        "Herramientas PDF, ZIP, hojas de cálculo y OCR",
+        "Acceso al Estudio de conversión (requiere motor)",
+        "Acceso a Font Studio para tipografía de marca",
         "Gestor de hasta 100 contactos",
-        "Perfil empresarial, datos del logotipo y colores de marca personalizados",
-        "Exportación de texto y documentos listos para imprimir",
+        "Perfil empresarial, logotipo y colores personalizados",
         "Soporte por correo electrónico"
       ],
       "ar": [
-        "مسودات وسجلات مستندات أعمال غير محدودة",
-        "قوالب للمقترحات وعروض الأسعار والفواتير والسير الذاتية وخطابات التقديم والتقارير",
+        "مسودات ومستندات أعمال محفوظة بلا حدود",
+        "قوالب وتصديرات كاملة لاستوديو المستندات والأعمال",
+        "أدوات PDF وZIP وجداول البيانات وOCR",
+        "الوصول إلى استوديو التحويل (يتطلب تشغيل المحرك)",
+        "الوصول إلى Font Studio لخطوط العلامة التجارية",
         "متتبع لما يصل إلى 100 جهة اتصال",
-        "ملف أعمال مخصص وتفاصيل الشعار وألوان العلامة التجارية",
-        "تنزيل النصوص وتصدير مستندات جاهزة للطباعة",
+        "ملف أعمال وشعار وألوان مخصصة",
         "دعم عبر البريد الإلكتروني"
       ]
     }
@@ -127,58 +137,63 @@ window.TAMPSLAT_PLANS={
       "EUR": 5,
       "CAD": 7
     },
-    "desc": "Manage a growing service business with more control and consistency.",
+    "desc": "Unlock creative studios, presentations, 3D and advanced workflows.",
     "features": [
       "Everything in Starter",
+      "Presentation Studio for professional slide work",
+      "Ebook Studio for structured EPUB authoring and export",
+      "3D Studio for interactive visual and 3D assets",
+      "Batch Studio for repeatable multi-file workflows",
       "Unlimited client and project records",
-      "Expanded brand kit and reusable document styling",
-      "Project, client and follow-up workflow tools",
-      "Priority access to new template releases",
-      "Optional AI credit top-ups when AI is enabled",
-      "Priority email support"
+      "AI Improve assistance and optional credit top-ups when enabled",
+      "Priority access to new studio features and email support"
     ],
     "desc_translations": {
-      "fr": "Gérez une activité de services en croissance avec plus de contrôle et de cohérence.",
-      "pt": "Gira um negócio de serviços em crescimento com mais controlo e consistência.",
-      "es": "Gestiona un negocio de servicios en crecimiento con más control y coherencia.",
-      "ar": "أدر نشاط خدمات متناميًا بمزيد من التحكم والاتساق."
+      "fr": "Débloquez les studios créatifs, les présentations, la 3D et les flux de travail avancés.",
+      "pt": "Aceda aos estúdios criativos, apresentações, 3D e fluxos de trabalho avançados.",
+      "es": "Desbloquea estudios creativos, presentaciones, 3D y flujos de trabajo avanzados.",
+      "ar": "افتح الاستوديوهات الإبداعية والعروض التقديمية وثلاثية الأبعاد وسير العمل المتقدم."
     },
     "feature_translations": {
       "fr": [
         "Tout le contenu de Starter",
-        "Nombre illimité de clients et de projets",
-        "Kit de marque enrichi et styles de documents réutilisables",
-        "Outils de suivi des projets, clients et relances",
-        "Accès prioritaire aux nouvelles versions des modèles",
-        "Recharges de crédits IA facultatives lorsque l’IA est activée",
-        "Assistance prioritaire par e-mail"
+        "Presentation Studio pour des présentations professionnelles",
+        "Ebook Studio pour créer et exporter des livres EPUB",
+        "3D Studio pour des visuels et actifs 3D interactifs",
+        "Batch Studio pour les flux multi-fichiers répétables",
+        "Nombre illimité de clients et projets",
+        "Assistance AI Improve et crédits facultatifs lorsque disponibles",
+        "Accès prioritaire aux nouveautés et assistance e-mail prioritaire"
       ],
       "pt": [
         "Tudo do Starter",
-        "Registos ilimitados de clientes e projetos",
-        "Kit de marca expandido e estilos de documentos reutilizáveis",
-        "Ferramentas de projetos, clientes e acompanhamento",
-        "Acesso prioritário a novas versões de modelos",
-        "Créditos de IA opcionais quando a IA estiver ativa",
-        "Suporte prioritário por e-mail"
+        "Presentation Studio para apresentações profissionais",
+        "Ebook Studio para criar e exportar livros EPUB",
+        "3D Studio para recursos visuais e 3D interativos",
+        "Batch Studio para fluxos repetíveis de vários ficheiros",
+        "Clientes e projetos ilimitados",
+        "Assistência AI Improve e créditos opcionais quando disponíveis",
+        "Acesso prioritário a novidades e suporte por e-mail prioritário"
       ],
       "es": [
         "Todo lo incluido en Starter",
-        "Registros ilimitados de clientes y proyectos",
-        "Kit de marca ampliado y estilos de documentos reutilizables",
-        "Herramientas de proyectos, clientes y seguimiento",
-        "Acceso prioritario a nuevas plantillas",
-        "Créditos de IA opcionales cuando la IA esté habilitada",
-        "Soporte prioritario por correo"
+        "Presentation Studio para presentaciones profesionales",
+        "Ebook Studio para crear y exportar libros EPUB",
+        "3D Studio para recursos visuales y 3D interactivos",
+        "Batch Studio para flujos repetibles de varios archivos",
+        "Clientes y proyectos ilimitados",
+        "Asistencia AI Improve y créditos opcionales cuando estén disponibles",
+        "Acceso prioritario a novedades y soporte prioritario"
       ],
       "ar": [
         "كل مزايا Starter",
-        "سجلات غير محدودة للعملاء والمشاريع",
-        "مجموعة علامة تجارية موسعة وأنماط مستندات قابلة لإعادة الاستخدام",
-        "أدوات متابعة المشاريع والعملاء والمتابعات",
-        "أولوية الوصول إلى تحديثات القوالب الجديدة",
-        "إضافات اختيارية لأرصدة الذكاء الاصطناعي عند تفعيله",
-        "دعم بريد إلكتروني ذو أولوية"
+        "Presentation Studio للعروض التقديمية الاحترافية",
+        "Ebook Studio لإنشاء كتب EPUB وتصديرها",
+        "3D Studio للأصول المرئية وثلاثية الأبعاد التفاعلية",
+        "Batch Studio لسير عمل الملفات المتعددة",
+        "عملاء ومشاريع بلا حدود",
+        "مساعدة AI Improve وأرصدة اختيارية عند تفعيلها",
+        "أولوية الوصول إلى الميزات الجديدة ودعم مميز"
       ]
     }
   },
@@ -191,57 +206,57 @@ window.TAMPSLAT_PLANS={
       "EUR": 9,
       "CAD": 14
     },
-    "desc": "Give a team a repeatable, shared way to prepare business work.",
+    "desc": "Bring every available studio into a broader business workflow.",
     "features": [
-      "Everything in Pro",
-      "Multiple business profiles and brand presets",
-      "Team-ready document templates and operating checklists",
-      "Expanded project and client oversight",
-      "Reusable workflows for recurring business documents",
-      "Optional AI credit top-ups when AI is enabled",
+      "Everything in Pro across all available studios",
+      "Multiple business profiles and reusable brand presets",
+      "Expanded business-document and project workflows",
+      "Team-ready templates, checklists and operating packs",
+      "Centralised client and project oversight tools",
+      "Optional AI credit top-ups when enabled",
       "Business-priority support"
     ],
     "desc_translations": {
-      "fr": "Offrez à votre équipe une méthode partagée et reproductible pour le travail professionnel.",
-      "pt": "Dê à equipa uma forma partilhada e repetível de preparar o trabalho empresarial.",
-      "es": "Ofrece a tu equipo una forma compartida y repetible de preparar el trabajo empresarial.",
-      "ar": "امنح فريقك طريقة مشتركة وقابلة للتكرار لإعداد أعماله."
+      "fr": "Réunissez tous les studios disponibles dans un flux de travail professionnel élargi.",
+      "pt": "Reúna todos os estúdios disponíveis num fluxo de trabalho empresarial alargado.",
+      "es": "Reúne todos los estudios disponibles en un flujo de trabajo empresarial ampliado.",
+      "ar": "اجمع جميع الاستوديوهات المتاحة ضمن سير عمل أعمال موسع."
     },
     "feature_translations": {
       "fr": [
-        "Tout le contenu de Pro",
-        "Plusieurs profils d’entreprise et préréglages de marque",
-        "Modèles de documents et listes de contrôle adaptés aux équipes",
-        "Suivi étendu des projets et des clients",
-        "Flux réutilisables pour les documents professionnels récurrents",
-        "Recharges de crédits IA facultatives lorsque l’IA est activée",
-        "Assistance prioritaire pour les entreprises"
+        "Tout le contenu de Pro dans tous les studios disponibles",
+        "Profils d’entreprise multiples et identités réutilisables",
+        "Flux étendus de documents et de projets",
+        "Modèles, listes de contrôle et dossiers opérationnels pour équipes",
+        "Outils de suivi centralisé des clients et projets",
+        "Recharges IA facultatives lorsque disponibles",
+        "Assistance prioritaire aux entreprises"
       ],
       "pt": [
-        "Tudo do Pro",
-        "Vários perfis empresariais e predefinições de marca",
-        "Modelos de documentos e listas de verificação para equipas",
-        "Acompanhamento ampliado de projetos e clientes",
-        "Fluxos reutilizáveis para documentos empresariais recorrentes",
-        "Créditos de IA opcionais quando a IA estiver ativa",
+        "Tudo do Pro em todos os estúdios disponíveis",
+        "Vários perfis empresariais e predefinições de marca reutilizáveis",
+        "Fluxos alargados de documentos e projetos",
+        "Modelos, listas de verificação e pacotes operacionais para equipas",
+        "Ferramentas centralizadas de clientes e projetos",
+        "Créditos de IA opcionais quando disponíveis",
         "Suporte prioritário para empresas"
       ],
       "es": [
-        "Todo lo incluido en Pro",
-        "Varios perfiles empresariales y ajustes de marca",
-        "Plantillas y listas de verificación para equipos",
-        "Supervisión ampliada de proyectos y clientes",
-        "Flujos reutilizables para documentos empresariales recurrentes",
-        "Créditos de IA opcionales cuando la IA esté habilitada",
+        "Todo lo incluido en Pro en todos los estudios disponibles",
+        "Varios perfiles empresariales y marcas reutilizables",
+        "Flujos ampliados de documentos y proyectos",
+        "Plantillas, listas de control y paquetes operativos para equipos",
+        "Herramientas centralizadas de clientes y proyectos",
+        "Créditos de IA opcionales cuando estén disponibles",
         "Soporte prioritario para empresas"
       ],
       "ar": [
-        "كل مزايا Pro",
-        "ملفات أعمال متعددة وإعدادات مسبقة للعلامة التجارية",
-        "قوالب مستندات وقوائم تحقق مناسبة للفرق",
-        "إشراف موسع على المشاريع والعملاء",
-        "سير عمل قابل لإعادة الاستخدام للمستندات المتكررة",
-        "إضافات اختيارية لأرصدة الذكاء الاصطناعي عند تفعيله",
+        "كل مزايا Pro في جميع الاستوديوهات المتاحة",
+        "ملفات أعمال متعددة وإعدادات علامة تجارية قابلة لإعادة الاستخدام",
+        "سير عمل موسع للمستندات والمشاريع",
+        "قوالب وقوائم تحقق وحزم تشغيلية للفرق",
+        "أدوات مركزية لمتابعة العملاء والمشاريع",
+        "أرصدة ذكاء اصطناعي اختيارية عند تفعيلها",
         "دعم أعمال ذو أولوية"
       ]
     }

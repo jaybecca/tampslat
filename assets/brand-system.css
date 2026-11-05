@@ -12,3 +12,11 @@
 .tool-card:nth-child(4n),.studio-card:nth-child(4n){--card-accent:var(--tamp-coral)}
 .tool-card,.studio-card{border-top-color:var(--card-accent,var(--tamp-violet))}
 .workspace-shell,.shell,.ops-shell{--brand:var(--tamp-violet)}
+
+/* TAMPslat global logo sizing — one consistent visual scale on every page. */
+a.brand img,.public-brand img,.topbar .brand img,.top .brand img,.ops-top>a:first-child img,.vault-top>a img,.auth-story>a img,.auth-mobile-logo,.footer-brand img{width:210px!important;height:48px!important;max-width:min(210px,48vw)!important;max-height:48px!important;min-width:0!important;object-fit:contain!important;object-position:left center!important;display:block!important;padding:0!important;background:transparent!important;border-radius:0!important;filter:none!important}
+@media(max-width:720px){a.brand img,.public-brand img,.topbar .brand img,.top .brand img,.ops-top>a:first-child img,.vault-top>a img,.auth-story>a img,.auth-mobile-logo,.footer-brand img{width:190px!important;height:44px!important;max-width:52vw!important;max-height:44px!important}}
+
+/* Auth and compact card headers use the same full-size wordmark. */
+.auth-card>a img,.card>a img.logo,.auth-page .auth-story>a img{width:210px!important;height:48px!important;max-width:min(210px,48vw)!important;max-height:48px!important;object-fit:contain!important;object-position:left center!important;display:block!important}
+@media(max-width:720px){.auth-card>a img,.card>a img.logo,.auth-page .auth-story>a img{width:190px!important;height:44px!important;max-width:52vw!important;max-height:44px!important}}

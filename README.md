@@ -94,7 +94,7 @@ This package combines the public home, pricing, policy pages and workspace. It i
 - `forgot-password.html` and `change-password.html`: frontend-only password recovery/update flows.
 - Login and signup forms include show/hide password controls.
 
-**Preview mode:** all six tools can be explored in the browser, but features that require accounts, cloud storage, payments, or connected AI may not work as production services until backend setup is complete.
+**Preview mode:** all eleven homepage studio entries can be explored in the browser, but features that require accounts, cloud storage, payments, or connected AI may not work as production services until backend setup is complete.
 
 AI assistance is planned for document drafting/refinement, PDF summarisation and question-answering, OCR classification and extraction, spreadsheet explanation/cleaning suggestions, ZIP file categorisation, and Batch Studio workflow recommendations. Deterministic file processing remains handled by browser code.
 
@@ -162,3 +162,14 @@ Read `FILE-STUDIO-ENGINE-SETUP.md` before exposing either service outside localh
 
 ## PDF, Spreadsheet and Archive Studio engine update
 See `PDF-SPREADSHEET-ARCHIVE-ENGINE-RELEASE.md` for the exact feature boundaries, setup and safety notes. PDF image optimization and PDF-to-DOCX require the document-converter Docker service. ZIP/GZIP operations run in a Web Worker; `.tampenc` is a TAMPslat-specific AES-256-GCM wrapper, not standard WinZip AES. The spreadsheet grid virtualizes rendered rows but still imports the workbook into browser memory; do not assume unbounded 100k+ row performance.
+
+
+## Platform-wide audit update — 2 November 2026
+- Homepage product catalogue expanded to 11 entries, including Document Converter Studio and Ebook Studio.
+- The File Studio page contains nine selectable tools; selecting a module now scrolls the active workspace into view and updates its hash for direct linking.
+- Login, signup and recovery pages now expose a five-language selector. Core studio pages use the shared language selector; translated coverage varies by page and some specialist controls remain English.
+- The profile menu can show the authenticated credit balance and stores low-credit, renewal and three-day expiry alert preferences locally. These toggles do not yet deliver notifications; renewal dates and notification delivery require backend support.
+- Nigeria checkout UI presents Flutterwave first and explains bank transfer, card and USSD methods where the provider supports them. Checkout remains disabled because provider checkout sessions and verified webhooks are not implemented.
+- **Known engine gap:** this ZIP does not include `services/document-converter/` or `services/font-compiler/`, although `docker-compose.yml` references them. The dedicated document conversion service and CFF font compiler cannot be built until those source folders are restored.
+- Account signup/sign-in and AI credit accounting have Worker routes, but password reset/change email delivery, Google OAuth, live subscriptions and payment entitlements are not fully configured.
+- Privacy, Terms, Refund, AI Use and Cookie policies remain starter text and require qualified review for each market before paid launch.
