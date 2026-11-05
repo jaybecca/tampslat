@@ -39,7 +39,7 @@ document.title="200 Editable Templates | TAMPslat";
 document.querySelector('meta[name="description"]').setAttribute("content","Explore 200 colourful editable business, career, finance, operations, marketing, sales, HR, education, creative and technology templates in TAMPslat.");
 function renderPaper(t){
   const f=fields[t.category],e=examples[t.category],p=document.getElementById("paper");
-  const accent=t.accent, id=t.id, v=(id-101)%8;
+  const accent=t.accent, id=t.id, v=(id-1)%8;
   const headings=f.map((h,i)=>({h,e:e[i]}));
   const title=t.name;
   const intro="A thoughtfully structured working document to help you plan, communicate and deliver with clarity.";
