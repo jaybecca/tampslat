@@ -173,3 +173,13 @@ See `PDF-SPREADSHEET-ARCHIVE-ENGINE-RELEASE.md` for the exact feature boundaries
 - **Known engine gap:** this ZIP does not include `services/document-converter/` or `services/font-compiler/`, although `docker-compose.yml` references them. The dedicated document conversion service and CFF font compiler cannot be built until those source folders are restored.
 - Account signup/sign-in and AI credit accounting have Worker routes, but password reset/change email delivery, Google OAuth, live subscriptions and payment entitlements are not fully configured.
 - Privacy, Terms, Refund, AI Use and Cookie policies remain starter text and require qualified review for each market before paid launch.
+
+
+## Product upgrade — 5 November 2026
+- Added a 100-item editable template library across ten practical categories, with in-browser editing, colour themes, copy, text download and print/PDF export.
+- Added 50 original SEO-focused business and digital-work articles in a crawlable static insights page, plus canonical metadata, structured ItemList data, robots.txt and sitemap.xml.
+- Aligned Free, Starter, Pro and Business plan descriptions with monthly server-side action, AI request, OCR, CSV, export and saved-work allowances. Existing advertised base prices are retained.
+- Added D1 monthly usage counters/events and the Usage & Limits account page. AI, OCR, CSV and saved-work endpoints reserve and record monthly usage. Browser-only operations must explicitly call the usage API to be metered.
+- Added Flutterwave Standard checkout creation, webhook hash verification, server-side transaction verification, plan activation for 30 days, and AI credit top-ups. Nigeria is routed to NGN. Automatic recurring subscription renewal is not enabled.
+- Added expanded support guidance and high-contrast dark-theme overrides for brand marks, navigation, buttons, forms and new content pages.
+- **Before deployment:** apply `backend/migrations/0002_usage_payments.sql`, configure `FLW_SECRET_KEY` and `FLW_SECRET_HASH`, set `APP_ORIGIN`, and follow `PAYMENTS-USAGE-SETUP.md`. Test with Flutterwave test credentials before live payments.
