@@ -170,66 +170,8 @@ window.TAMPSLAT_PLANS={
       "Unlimited client and project records",
       "Priority email support"
     ],
-    "desc_translations": {
-      "fr": "Un espace de travail quotidien pour les indépendants et professionnels.",
-      "pt": "Um espaço de trabalho diário para freelancers e profissionais independentes.",
-      "es": "Un espacio de trabajo diario para autónomos y profesionales independientes.",
-      "ar": "مساحة عمل يومية عملية للمستقلين والمهنيين."
-    },
-    "feature_translations": {
-      "fr": [
-        "300 actions de studio côté serveur par mois",
-        "100 requêtes IA par mois si activées (crédits séparés)",
-        "100 éléments de travail enregistrés par mois",
-        "100 pages OCR et 100 analyses CSV par mois",
-        "150 exports par mois",
-        "Studios Documents et Affaires, PDF, ZIP et Tableur",
-        "Conversion et Font Studio lorsque leurs moteurs sont disponibles",
-        "Suivi de 100 contacts maximum",
-        "Profil d’entreprise et couleurs personnalisés",
-        "Assistance par e-mail",
-        "Priority email support"
-      ],
-      "pt": [
-        "300 ações de estúdio no servidor por mês",
-        "100 pedidos de IA por mês quando ativo (créditos separados)",
-        "100 itens de trabalho guardados por mês",
-        "100 páginas OCR e 100 análises CSV por mês",
-        "150 exportações por mês",
-        "Estúdios de Documentos e Negócios, PDF, ZIP e Folhas de Cálculo",
-        "Conversão e Font Studio quando os motores estiverem disponíveis",
-        "Gestor até 100 contactos",
-        "Perfil empresarial e cores personalizados",
-        "Suporte por e-mail",
-        "Priority email support"
-      ],
-      "es": [
-        "300 acciones de estudio en servidor al mes",
-        "100 solicitudes de IA al mes si está habilitada (créditos aparte)",
-        "100 elementos de trabajo guardados al mes",
-        "100 páginas OCR y 100 análisis CSV al mes",
-        "150 exportaciones al mes",
-        "Estudios de Documentos y Negocio, PDF, ZIP y Hojas de cálculo",
-        "Conversión y Font Studio cuando sus motores estén disponibles",
-        "Seguimiento de hasta 100 contactos",
-        "Perfil comercial y colores personalizados",
-        "Soporte por correo",
-        "Priority email support"
-      ],
-      "ar": [
-        "300 عملية استخدام للاستوديو عبر الخادم شهريًا",
-        "100 طلب ذكاء اصطناعي شهريًا عند التفعيل (الأرصدة منفصلة)",
-        "100 عنصر عمل محفوظ شهريًا",
-        "100 صفحة OCR و100 تحليل CSV شهريًا",
-        "150 عملية تصدير شهريًا",
-        "استوديوهات المستندات والأعمال وPDF وZIP وجداول البيانات",
-        "استوديو التحويل والخطوط عند توفر محركات التشغيل",
-        "متتبع حتى 100 جهة اتصال",
-        "ملف أعمال وألوان مخصصة",
-        "دعم عبر البريد الإلكتروني",
-        "Priority email support"
-      ]
-    }
+    "desc_translations": {},
+    "feature_translations": {}
   },
   "business": {
     "name": "Business",
@@ -253,61 +195,7 @@ window.TAMPSLAT_PLANS={
       "Centralised client and project oversight",
       "Business-priority support"
     ],
-    "desc_translations": {
-      "fr": "Un espace de travail quotidien pour les indépendants et professionnels.",
-      "pt": "Um espaço de trabalho diário para freelancers e profissionais independentes.",
-      "es": "Un espacio de trabajo diario para autónomos y profesionales independientes.",
-      "ar": "مساحة عمل يومية عملية للمستقلين والمهنيين."
-    },
-    "feature_translations": {
-      "fr": [
-        "300 actions de studio côté serveur par mois",
-        "100 requêtes IA par mois si activées (crédits séparés)",
-        "100 éléments de travail enregistrés par mois",
-        "100 pages OCR et 100 analyses CSV par mois",
-        "150 exports par mois",
-        "Studios Documents et Affaires, PDF, ZIP et Tableur",
-        "Conversion et Font Studio lorsque leurs moteurs sont disponibles",
-        "Suivi de 100 contacts maximum",
-        "Profil d’entreprise et couleurs personnalisés",
-        "Assistance par e-mail"
-      ],
-      "pt": [
-        "300 ações de estúdio no servidor por mês",
-        "100 pedidos de IA por mês quando ativo (créditos separados)",
-        "100 itens de trabalho guardados por mês",
-        "100 páginas OCR e 100 análises CSV por mês",
-        "150 exportações por mês",
-        "Estúdios de Documentos e Negócios, PDF, ZIP e Folhas de Cálculo",
-        "Conversão e Font Studio quando os motores estiverem disponíveis",
-        "Gestor até 100 contactos",
-        "Perfil empresarial e cores personalizados",
-        "Suporte por e-mail"
-      ],
-      "es": [
-        "300 acciones de estudio en servidor al mes",
-        "100 solicitudes de IA al mes si está habilitada (créditos aparte)",
-        "100 elementos de trabajo guardados al mes",
-        "100 páginas OCR y 100 análisis CSV al mes",
-        "150 exportaciones al mes",
-        "Estudios de Documentos y Negocio, PDF, ZIP y Hojas de cálculo",
-        "Conversión y Font Studio cuando sus motores estén disponibles",
-        "Seguimiento de hasta 100 contactos",
-        "Perfil comercial y colores personalizados",
-        "Soporte por correo"
-      ],
-      "ar": [
-        "300 عملية استخدام للاستوديو عبر الخادم شهريًا",
-        "100 طلب ذكاء اصطناعي شهريًا عند التفعيل (الأرصدة منفصلة)",
-        "100 عنصر عمل محفوظ شهريًا",
-        "100 صفحة OCR و100 تحليل CSV شهريًا",
-        "150 عملية تصدير شهريًا",
-        "استوديوهات المستندات والأعمال وPDF وZIP وجداول البيانات",
-        "استوديو التحويل والخطوط عند توفر محركات التشغيل",
-        "متتبع حتى 100 جهة اتصال",
-        "ملف أعمال وألوان مخصصة",
-        "دعم عبر البريد الإلكتروني"
-      ]
-    }
+    "desc_translations": {},
+    "feature_translations": {}
   }
 };
