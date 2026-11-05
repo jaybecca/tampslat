@@ -43,7 +43,7 @@ jobs:
           const fs = require('node:fs');
           const vm = require('node:vm');
           const files = [
-            'index.html', 'pricing.html', 'support.html', 'login.html',
+            'index.html', 'pricing.html', 'support.html', 'template-library.html', 'blog/index.html', 'login.html',
             'signup.html', 'tools.html', 'zip-studio.html', 'file-studio.html', 'pdf-studio.html', 'document-converter.html', 'vault-studio.html'
           ];
           for (const file of files) {
