@@ -11,15 +11,19 @@
     request,
     health:()=>request('/health',{headers:{}}),
     signup:(email,password)=>request('/auth/signup',{method:'POST',body:JSON.stringify({email,password})}),
+    recover:(email)=>request('/auth/recover',{method:'POST',body:JSON.stringify({email})}),
+    updatePassword:(accessToken,password)=>request('/auth/update-password',{method:'POST',body:JSON.stringify({accessToken,password})}),
     login:(email,password)=>request('/auth/login',{method:'POST',body:JSON.stringify({email,password})}),
     logout:()=>request('/auth/logout',{method:'POST',body:'{}'}),
     me:()=>request('/auth/me',{headers:{}}),
     generate:(task,prompt,context='')=>request('/ai/generate',{method:'POST',body:JSON.stringify({task,prompt,context})}),
     analyzeCsv:(csv,filename)=>request('/tools/csv/analyze',{method:'POST',body:JSON.stringify({csv,filename})}),
-    ocr:(file)=>{const body=new FormData();body.append('file',file);return request('/tools/ocr',{method:'POST',body});},
     listWork:()=>request('/work',{headers:{}}),
+    getWork:(id)=>request('/work/'+encodeURIComponent(id),{headers:{}}),
     saveWork:(kind,title,content)=>request('/work',{method:'POST',body:JSON.stringify({kind,title,content})}),
+    deleteWork:(id)=>request('/work/'+encodeURIComponent(id),{method:'DELETE'}),
     billing:()=>request('/billing/summary',{headers:{}}),
+    usage:()=>request('/usage/summary',{headers:{}}),
     adminOverview:()=>request('/admin/overview',{headers:{}})
   };
 })();

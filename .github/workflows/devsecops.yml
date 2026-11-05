@@ -24,14 +24,42 @@ jobs:
       - name: Validate Worker and browser engines
         run: |
           node --check backend/worker.js
+          node --check backend/billing.js
           node --check backend-client.js
           node --check site-locale.js
+          node --check pricing-language.js
+          node --check support-translations.js
           node --check workspace-i18n.js
           node --check auth-language.js
           node --check engines/ai-refinement-client.js
           node --check engines/studio-design-engine.js
+          node --check engines/document-preview.js
           node --check app.js
           node --check landing.js
+
+      - name: Validate inline scripts in key UI pages
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const vm = require('node:vm');
+          const files = [
+            'index.html', 'pricing.html', 'support.html', 'login.html',
+            'signup.html', 'tools.html', 'zip-studio.html', 'file-studio.html', 'pdf-studio.html', 'document-converter.html', 'vault-studio.html'
+          ];
+          for (const file of files) {
+            const html = fs.readFileSync(file, 'utf8');
+            const pattern = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+            let match;
+            let number = 0;
+            while ((match = pattern.exec(html))) {
+              const attrs = match[1] || '';
+              if (/\bsrc\s*=/.test(attrs)) continue;
+              const type = (attrs.match(/\btype\s*=\s*["']?([^"'\s>]+)/i) || [])[1] || 'text/javascript';
+              if (!['text/javascript', 'application/javascript'].includes(type.toLowerCase())) continue;
+              new vm.Script(match[2], { filename: file + ' inline script ' + (++number) });
+            }
+          }
+          NODE
 
       - name: Trivy security scan
         uses: aquasecurity/trivy-action@v0.36.0
