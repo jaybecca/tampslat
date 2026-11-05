@@ -112,3 +112,89 @@ body.dark .public-product b{color:#f4f5ff}
 body.dark .public-product p{color:#c0c7e2}
 body.dark .tiny-theme-toggle{background:#252b46;color:#fbbf24;border-color:#596080}
 @media(max-width:600px){.tiny-theme-toggle{width:26px;height:26px;min-width:26px;font-size:14px}}
+
+
+/* TAMPslat homepage navigation, studio catalogue and theme corrections. */
+.public-home-legacy-topbar{display:none!important}
+.public-nav{height:78px;padding:10px clamp(20px,5vw,76px);gap:24px}
+.public-brand img{width:190px;max-width:18vw;min-width:160px}
+.public-nav nav{flex:1;justify-content:center;gap:clamp(12px,2vw,25px)}
+.public-nav nav a{white-space:nowrap;font-size:13px;font-weight:650}
+.public-nav-actions{gap:8px;flex-shrink:0}
+.public-nav-actions select{padding:9px 10px;border-radius:9px;font-size:12px}
+.public-nav .btn{padding:11px 15px;font-size:12px;white-space:nowrap}
+.public-nav .tiny-theme-toggle{width:34px;height:34px;min-width:34px;font-size:17px}
+.public-footer{background:#fff;color:#1d2b4b;border-top:1px solid #e7eaf1;padding:18px clamp(20px,6vw,88px);gap:14px}
+.footer-brand img{filter:none;width:155px}
+.public-footer>span{color:#66728a}
+.legal-footer a{color:#586681}
+.studio-categories{max-width:1240px;margin:0 auto;display:grid;gap:13px}
+.studio-category{background:#fff;border:1px solid #e6e8f1;border-radius:18px;box-shadow:0 8px 24px rgba(30,39,80,.045);overflow:hidden}
+.studio-category>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:14px;min-height:76px;padding:17px 22px;user-select:none}
+.studio-category>summary::-webkit-details-marker{display:none}
+.studio-category-symbol{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:#f0edff;color:#6d50d7;font-size:20px;font-weight:800;flex:0 0 auto}
+.studio-category-title{font-size:16px;font-weight:800;color:#1d2b4b}
+.studio-category-count{margin-left:auto;color:#7b8499;font-size:11px;font-weight:700;white-space:nowrap}
+.studio-category-toggle{width:28px;height:28px;border:1px solid #e2e5ef;border-radius:50%;display:grid;place-items:center;color:#5f4ac7;flex:0 0 auto;position:relative}
+.studio-category-toggle:before,.studio-category-toggle:after{content:"";position:absolute;width:11px;height:2px;background:currentColor;border-radius:2px}
+.studio-category-toggle:after{transform:rotate(90deg);transition:transform .18s}
+.studio-category[open] .studio-category-toggle:after{transform:rotate(0)}
+.studio-category-content{padding:0 16px 17px}
+.studio-category-content .public-product-grid{max-width:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.studio-category-content .public-product{min-height:178px;padding:19px;border-radius:15px}
+.studio-category-content .public-product>span{margin-bottom:12px}
+.studio-category-content .public-product>b{font-size:15px;margin:6px 0}
+.studio-category-content .public-product p{font-size:12px;line-height:1.55;margin:5px 0}
+.studio-category-content .public-product em{font-size:11px;margin-top:8px}
+.public-products .products-cta{margin-top:28px}
+.template-library-scroll-target{scroll-margin-top:96px}
+body.dark .public-site{background:#14182b;color:#edf0ff}
+body.dark .public-nav{background:rgba(20,24,43,.96);border-color:#30364f}
+body.dark .public-nav nav a{color:#e0e5f7}
+body.dark .public-nav nav a:hover{color:#b5a5ff}
+body.dark .public-nav-actions select{background:#1b2139;color:#eef0ff;border-color:#3b4260}
+body.dark .public-hero{background:radial-gradient(ellipse at 90% 10%,#292449 0,transparent 36%),radial-gradient(ellipse at 5% 90%,#172b46 0,transparent 36%),linear-gradient(120deg,#151a30 10%,#1a2038 100%)}
+body.dark .public-hero h1{color:#f2f3ff}
+body.dark .public-hero-copy>p{color:#c1c8df}
+body.dark .benefit-strip,body.dark .public-products,body.dark .plans-section,body.dark .faq-support{background:#171d34;color:#edf0ff;border-color:#30364f}
+body.dark .benefit-strip article b,body.dark .products-heading h2,body.dark .section-intro h2,body.dark .faq-support h2{color:#edf0ff}
+body.dark .benefit-strip article p,body.dark .products-heading>p,body.dark .section-intro p,body.dark .faq-support p{color:#b5bed5}
+body.dark .studio-category{background:#1d2440;border-color:#3b4264}
+body.dark .studio-category-title{color:#eef0ff}
+body.dark .studio-category-count{color:#aeb7d0}
+body.dark .studio-category-toggle{border-color:#465071;color:#c6baff}
+body.dark .plan-card{background:#202744;border-color:#3a4261}
+body.dark .plan-name,body.dark .plan-price strong{color:#f0f2ff}
+body.dark .plan-head p,body.dark .plan-price span,body.dark .plan-card li{color:#bac3dc}
+body.dark .plan-rule{background:#3a4261}
+body.dark .pricing-footnote{color:#aeb7ce}
+body.dark .policy-panel{background:#1d2440;color:#edf0ff;border-color:#3b4264}
+body.dark .policy-panel article p{color:#c1c8df}
+body.dark .public-footer{background:#fff;color:#1d2b4b;border-top-color:#e7eaf1}
+body.dark .public-footer>span{color:#66728a}
+@media(max-width:1050px){
+ .public-nav{padding-inline:22px;gap:16px}
+ .public-brand img{width:165px;min-width:145px}
+ .public-nav nav{gap:12px}
+ .public-nav nav a{font-size:12px}
+ .public-nav-actions{gap:6px}
+ .public-nav-actions select{padding:8px 7px}
+ .studio-category-content .public-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:720px){
+ .public-nav{min-height:0;height:auto;padding:12px 16px;gap:10px}
+ .public-brand img{width:155px;max-width:43vw;min-width:0}
+ .public-nav nav{order:3;width:100%;justify-content:space-between;gap:9px;padding:8px 0 1px}
+ .public-nav nav a{font-size:11px}
+ .public-nav-actions{margin-left:auto}
+ .public-nav-actions select{padding:8px 6px;font-size:10px}
+ .public-nav .btn{padding:9px 10px;font-size:10px}
+ .public-nav .tiny-theme-toggle{width:30px;height:30px;min-width:30px}
+ .studio-category>summary{min-height:66px;padding:13px 14px;gap:9px}
+ .studio-category-title{font-size:13px}
+ .studio-category-count{font-size:10px}
+ .studio-category-content{padding:0 10px 12px}
+ .studio-category-content .public-product-grid{grid-template-columns:1fr}
+ .studio-category-content .public-product{min-height:0;padding:17px}
+ .public-footer{padding:20px 16px}
+}
