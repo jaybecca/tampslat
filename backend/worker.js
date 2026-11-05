@@ -290,13 +290,15 @@ async function route(req, env) {
   const billingResponse=await handleBilling(req,env,user,path);if(billingResponse)return billingResponse;
   if(path==='/api/admin/overview'&&req.method==='GET'){
     if(user.role!=='admin')return fail('Administrator access required.',403);
-    const [totals,plans,credits]=await Promise.all([
+    const period=usagePeriod();
+    const [totals,plans,credits,usage]=await Promise.all([
       env.DB.prepare("SELECT COUNT(*) AS users, SUM(CASE WHEN plan='free' THEN 1 ELSE 0 END) AS free_users, SUM(CASE WHEN plan!='free' THEN 1 ELSE 0 END) AS paid_users FROM users").first(),
       env.DB.prepare("SELECT plan,COUNT(*) AS count FROM users GROUP BY plan").all(),
-      env.DB.prepare("SELECT COALESCE(SUM(CASE WHEN amount<0 THEN -amount ELSE 0 END),0) AS consumed FROM credit_ledger WHERE event_type IN ('ai_usage','ai_refinement')").first()
+      env.DB.prepare("SELECT COALESCE(SUM(CASE WHEN amount<0 THEN -amount ELSE 0 END),0) AS consumed FROM credit_ledger WHERE event_type IN ('ai_usage','ai_refinement')").first(),
+      env.DB.prepare("SELECT feature,SUM(used) AS used FROM usage_counters WHERE period_key=? GROUP BY feature").bind(period).all()
     ]);
     await env.DB.prepare("INSERT INTO audit_events(id,user_id,event_type,detail_json) VALUES(?,?,?,?)").bind(uid(),user.id,'admin.analytics.viewed','{}').run();
-    return json({totals:totals||{},plans:plans.results||[],credits:credits||{},generatedAt:new Date().toISOString()});
+    return json({totals:totals||{},plans:plans.results||[],credits:credits||{},usage:{period,features:usage.results||[]},generatedAt:new Date().toISOString()});
   }
   if(path==='/api/ai/generate'&&req.method==='POST')return aiGenerate(req,env,user);
   if(path==='/api/ai/refine'&&req.method==='POST')return aiRefine(req,env,user);
