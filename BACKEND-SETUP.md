@@ -83,9 +83,9 @@ The signup response sets an HttpOnly session cookie. Use a cookie-aware browser 
 
 ## Production blockers / important limitations
 
-- **Email verification and password reset are not implemented yet.** Add a transactional email provider and expiring one-time tokens before public launch. The current recovery/change-password pages remain UI only.
-- **Google OAuth is not implemented yet.** Remove or label the Google buttons until OAuth credentials and callback/session validation are configured.
-- **Payments are not connected.** Paddle and Flutterwave checkout/webhook verification, subscription state changes, refunds and paid credit grants must be implemented and tested before accepting money. Never grant paid credits based on a browser redirect.
+- **Email verification and password reset remain outstanding.** Add a transactional email provider and expiring one-time tokens before public launch. The current recovery/change-password pages remain UI only.
+- **Google OAuth remains outstanding.** Remove or label the Google buttons until OAuth credentials and callback/session validation are configured.
+- **Payments:** Flutterwave Standard checkout creation, webhook hash validation, server-side transaction verification, 30-day plan activation and AI credit top-ups are implemented. Apply migration `0002_usage_payments.sql`, configure `FLW_SECRET_KEY` and `FLW_SECRET_HASH`, set `APP_ORIGIN`, and complete test-mode transactions before accepting live payments. Automatic recurring subscription billing, refunds and chargebacks are not implemented. Never grant paid access from a browser redirect alone.
 - **Admin role provisioning is not included.** Do not expose `admin.html` as a real admin console; its current values are demo data.
 - **Data at rest:** D1 is account-scoped, but user work content currently has no application-level encryption. Do not store highly sensitive client, identity, medical, financial-account or confidential business documents until retention, deletion, backup and encryption policies are decided.
 - **File processing:** PDF/ZIP transformations remain primarily browser-side. CSV analysis API accepts CSV text (up to 1.5 MB). OCR endpoint supports image files only; scanned PDF OCR and full cloud file vault are not yet implemented.
