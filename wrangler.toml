@@ -1,22 +1,26 @@
-name = "tampslat-api"
+name = 'tampslat'
 main = "backend/worker.js"
 compatibility_date = "2026-10-28"
 workers_dev = true
 
 [vars]
-APP_ORIGIN = "https://YOUR-TAMPSLAT-DOMAIN.example"
+APP_ORIGIN = "https://tampslat.tampconsulting.space"
 AI_PROVIDER = "openai"
 AI_MODEL = "gpt-4.1-mini"
 FREE_AI_CREDITS = "5"
 AI_CREDIT_COST = "1"
 MAX_AI_INPUT_CHARS = "12000"
-MAX_OCR_BYTES = "5000000"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "tampslat-db"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "3399d02b-9b82-4575-b7b1-e428b5c782b2"
 migrations_dir = "backend/migrations"
+
+# Required production secret (set with `npx wrangler secret put OPENAI_API_KEY`).
+# Never put provider keys in [vars], HTML, browser storage, or admin.html.
+[secrets]
+required = ["OPENAI_API_KEY"]
 
 [[r2_buckets]]
 binding = "FILES"
@@ -26,5 +30,25 @@ bucket_name = "tampslat-files"
 directory = "."
 run_worker_first = ["/api/*"]
 
-[secrets]
-required = ["OPENAI_API_KEY"]
+# Worker Previews use isolated resources. Never point these at production.
+[previews.vars]
+ENVIRONMENT = "preview"
+APP_ORIGIN = "https://feat-tampslat-studio-language-preview-build-tampslat.beccaogbeide.workers.dev"
+SUPABASE_URL = "https://qqfmsvepxxagszzhhjap.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_zxfcbavvt1HnL1mPiO_zzA_4l9YoG56"
+AI_PROVIDER = "openai"
+AI_MODEL = "gpt-4.1-mini"
+FREE_AI_CREDITS = "5"
+AI_CREDIT_COST = "1"
+MAX_AI_INPUT_CHARS = "12000"
+PAYMENT_MODE = "sandbox"
+ALLOW_LIVE_PAYMENTS = "false"
+
+[[previews.d1_databases]]
+binding = "DB"
+database_name = "tampslat-preview-db"
+database_id = "fa458da0-8ac2-45c8-844b-c08010c8645a"
+
+[[previews.r2_buckets]]
+binding = "FILES"
+bucket_name = "tampslat-preview-files"
