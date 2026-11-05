@@ -20,7 +20,9 @@
     analyzeCsv:(csv,filename)=>request('/tools/csv/analyze',{method:'POST',body:JSON.stringify({csv,filename})}),
     ocr:(file)=>{const body=new FormData();body.append('file',file);return request('/tools/ocr',{method:'POST',body});},
     listWork:()=>request('/work',{headers:{}}),
+    getWork:(id)=>request('/work/'+encodeURIComponent(id),{headers:{}}),
     saveWork:(kind,title,content)=>request('/work',{method:'POST',body:JSON.stringify({kind,title,content})}),
+    deleteWork:(id)=>request('/work/'+encodeURIComponent(id),{method:'DELETE'}),
     billing:()=>request('/billing/summary',{headers:{}}),
     usage:()=>request('/usage/summary',{headers:{}}),
     adminOverview:()=>request('/admin/overview',{headers:{}})
