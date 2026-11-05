@@ -311,7 +311,7 @@ async function route(req, env) {
     if(!reservation)return fail('You have reached this month’s saved-work allowance for your plan. Your allowance resets on the first day of next month (UTC).',429);
     const id=uid();
     try { await env.DB.prepare('INSERT INTO work_items(id,user_id,kind,title,content_json) VALUES(?,?,?,?,?)').bind(id,user.id,kind,title,content).run();await recordUsage(env,user,'saved_work',reservation.period,{kind});return json({id,title,kind,usage:{used:reservation.used,limit:reservation.limit,period:reservation.period}},201); }
-    catch(error){await releaseUsage(env,user,'saved_work',reservation.period);throw error;}
+    catch(error){await env.DB.prepare('DELETE FROM work_items WHERE id=? AND user_id=?').bind(id,user.id).run();await releaseUsage(env,user,'saved_work',reservation.period);throw error;}
   }  if(path.startsWith('/api/work/')&&req.method==='GET'){const id=path.split('/').pop();const row=await env.DB.prepare('SELECT id,kind,title,content_json,created_at,updated_at FROM work_items WHERE id=? AND user_id=?').bind(id,user.id).first();if(!row)return fail('Work item not found.',404);let content={};try{content=JSON.parse(row.content_json||'{}')}catch{};return json({item:{id:row.id,kind:row.kind,title:row.title,content,created_at:row.created_at,updated_at:row.updated_at}});}
   if(path.startsWith('/api/work/')&&req.method==='DELETE'){const id=path.split('/').pop();const result=await env.DB.prepare('DELETE FROM work_items WHERE id=? AND user_id=?').bind(id,user.id).run();return result.meta?.changes?json({ok:true}):fail('Work item not found.',404);}
   if(path==='/api/usage/summary'&&req.method==='GET')return json(await usageSnapshot(env,user));
