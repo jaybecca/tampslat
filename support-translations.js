@@ -37,7 +37,7 @@ Object.assign(extra.ar,{"Checkout is in a controlled sandbox rollout; live charg
  "How do I use Career and Business Studio?":"Comment utiliser Career Studio et Business Studio ?",
  "Career Studio groups CVs, cover letters, statements of purpose and portfolios. Business Studio focuses on proposals, quotations, invoices, business documents and finance workbooks. Choose a template, complete the fields and review every detail before exporting.":"Career Studio regroupe les CV, lettres de motivation, déclarations d’intention et portfolios. Business Studio est consacré aux propositions, devis, factures, documents professionnels et feuilles financières. Choisissez un modèle, remplissez les champs et vérifiez chaque détail avant l’exportation.",
  "Which payment methods are supported?":"Quels moyens de paiement sont pris en charge ?",
- "Eligible Nigerian customers are directed to Flutterwave, which may offer card, bank transfer and USSD where enabled. International customers are directed to Paddle and the payment methods available in their country. Payment details are entered only on the provider’s secure checkout page.":"Les clients éligibles au Nigeria sont dirigés vers Flutterwave, qui peut proposer la carte, le virement bancaire et l’USSD selon les options activées. Les clients internationaux sont dirigés vers Paddle et les moyens de paiement disponibles dans leur pays. Les informations de paiement sont saisies uniquement sur la page de paiement sécurisée du prestataire.",
+ 
  "How do plan renewals and cancellations work?":"Comment fonctionnent le renouvellement et l’annulation des offres ?",
  
  "How do I change or recover my password?":"Comment modifier ou récupérer mon mot de passe ?",
@@ -73,7 +73,7 @@ Object.assign(extra.ar,{"Checkout is in a controlled sandbox rollout; live charg
  "How do I use Career and Business Studio?":"Como utilizo o Career Studio e o Business Studio?",
  "Career Studio groups CVs, cover letters, statements of purpose and portfolios. Business Studio focuses on proposals, quotations, invoices, business documents and finance workbooks. Choose a template, complete the fields and review every detail before exporting.":"O Career Studio reúne CVs, cartas de apresentação, declarações de objetivos e portfólios. O Business Studio centra-se em propostas, orçamentos, faturas, documentos empresariais e folhas financeiras. Escolha um modelo, preencha os campos e reveja todos os detalhes antes de exportar.",
  "Which payment methods are supported?":"Que métodos de pagamento são suportados?",
- "Eligible Nigerian customers are directed to Flutterwave, which may offer card, bank transfer and USSD where enabled. International customers are directed to Paddle and the payment methods available in their country. Payment details are entered only on the provider’s secure checkout page.":"Os clientes elegíveis na Nigéria são encaminhados para o Flutterwave, que pode disponibilizar cartão, transferência bancária e USSD. Os clientes internacionais são encaminhados para o Paddle e os métodos disponíveis no seu país. Os dados de pagamento são introduzidos apenas na página segura do fornecedor.",
+ 
  "How do plan renewals and cancellations work?":"Como funcionam as renovações e os cancelamentos dos planos?",
  
  "How do I change or recover my password?":"Como altero ou recupero a minha palavra-passe?",
@@ -109,7 +109,7 @@ Object.assign(extra.ar,{"Checkout is in a controlled sandbox rollout; live charg
  "How do I use Career and Business Studio?":"¿Cómo utilizo Career Studio y Business Studio?",
  "Career Studio groups CVs, cover letters, statements of purpose and portfolios. Business Studio focuses on proposals, quotations, invoices, business documents and finance workbooks. Choose a template, complete the fields and review every detail before exporting.":"Career Studio reúne CV, cartas de presentación, declaraciones de propósito y portafolios. Business Studio se centra en propuestas, presupuestos, facturas, documentos empresariales y hojas financieras. Elige una plantilla, completa los campos y revisa todos los detalles antes de exportar.",
  "Which payment methods are supported?":"¿Qué métodos de pago se admiten?",
- "Eligible Nigerian customers are directed to Flutterwave, which may offer card, bank transfer and USSD where enabled. International customers are directed to Paddle and the payment methods available in their country. Payment details are entered only on the provider’s secure checkout page.":"Los clientes elegibles de Nigeria son dirigidos a Flutterwave, que puede ofrecer tarjeta, transferencia bancaria y USSD cuando esté habilitado. Los clientes internacionales son dirigidos a Paddle y a los métodos disponibles en su país. Los datos de pago se introducen solo en la página segura del proveedor.",
+ 
  "How do plan renewals and cancellations work?":"¿Cómo funcionan las renovaciones y cancelaciones de los planes?",
  
  "How do I change or recover my password?":"¿Cómo cambio o recupero mi contraseña?",
@@ -145,7 +145,7 @@ Object.assign(extra.ar,{"Checkout is in a controlled sandbox rollout; live charg
  "How do I use Career and Business Studio?":"كيف أستخدم استوديو الوظائف واستوديو الأعمال؟",
  "Career Studio groups CVs, cover letters, statements of purpose and portfolios. Business Studio focuses on proposals, quotations, invoices, business documents and finance workbooks. Choose a template, complete the fields and review every detail before exporting.":"يجمع استوديو الوظائف السير الذاتية ورسائل التقديم وبيانات الغرض والمحافظ المهنية. يركز استوديو الأعمال على المقترحات وعروض الأسعار والفواتير ومستندات الأعمال وجداول التمويل. اختر قالبًا وأكمل الحقول وراجع التفاصيل قبل التصدير.",
  "Which payment methods are supported?":"ما وسائل الدفع المدعومة؟",
- "Eligible Nigerian customers are directed to Flutterwave, which may offer card, bank transfer and USSD where enabled. International customers are directed to Paddle and the payment methods available in their country. Payment details are entered only on the provider’s secure checkout page.":"يتم توجيه العملاء المؤهلين في نيجيريا إلى Flutterwave، الذي قد يوفر البطاقة والتحويل البنكي وUSSD عند تفعيلها. ويتم توجيه العملاء الدوليين إلى Paddle ووسائل الدفع المتاحة في بلدانهم. تُدخل بيانات الدفع فقط في صفحة الدفع الآمنة للمزود.",
+ 
  "How do plan renewals and cancellations work?":"كيف تعمل عمليات تجديد الخطط وإلغاؤها؟",
  
  "How do I change or recover my password?":"كيف أغير كلمة المرور أو أستعيدها؟",
