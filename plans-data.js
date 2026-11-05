@@ -170,8 +170,66 @@ window.TAMPSLAT_PLANS={
       "Unlimited client and project records",
       "Priority email support"
     ],
-    "desc_translations": {},
-    "feature_translations": {}
+    "desc_translations": {
+      "fr": "Pour les équipes et créateurs en croissance qui ont besoin de tous les studios essentiels et d’une capacité mensuelle supérieure.",
+      "pt": "Para equipas e criadores em crescimento que precisam de todos os estúdios essenciais e maior capacidade mensal.",
+      "es": "Para equipos y creadores en crecimiento que necesitan todos los estudios principales y mayor capacidad mensual.",
+      "ar": "للفرق والمبدعين الناميين الذين يحتاجون إلى جميع الاستوديوهات الأساسية وسعة شهرية أكبر."
+    },
+    "feature_translations": {
+      "fr": [
+        "1 500 actions de studio côté serveur par mois",
+        "500 requêtes IA par mois si activées (crédits séparés)",
+        "500 éléments de travail enregistrés par mois",
+        "500 pages OCR et 500 analyses CSV par mois",
+        "750 exports par mois",
+        "Tout le contenu de Starter",
+        "Presentation Studio et Ebook Studio",
+        "3D Studio et Batch Studio",
+        "Édition avancée des modèles et identités de marque réutilisables",
+        "Clients et projets illimités",
+        "Assistance prioritaire par e-mail"
+      ],
+      "pt": [
+        "1.500 ações de estúdio no servidor por mês",
+        "500 pedidos de IA por mês quando ativo (créditos separados)",
+        "500 itens de trabalho guardados por mês",
+        "500 páginas OCR e 500 análises CSV por mês",
+        "750 exportações por mês",
+        "Tudo do Starter",
+        "Presentation Studio e Ebook Studio",
+        "3D Studio e Batch Studio",
+        "Edição avançada de modelos e marcas reutilizáveis",
+        "Clientes e projetos ilimitados",
+        "Suporte prioritário por e-mail"
+      ],
+      "es": [
+        "1.500 acciones de estudio en servidor al mes",
+        "500 solicitudes de IA al mes si está habilitada (créditos aparte)",
+        "500 elementos de trabajo guardados al mes",
+        "500 páginas OCR y 500 análisis CSV al mes",
+        "750 exportaciones al mes",
+        "Todo lo incluido en Starter",
+        "Presentation Studio y Ebook Studio",
+        "3D Studio y Batch Studio",
+        "Edición avanzada de plantillas y marcas reutilizables",
+        "Clientes y proyectos ilimitados",
+        "Soporte prioritario por correo"
+      ],
+      "ar": [
+        "1,500 عملية استخدام للاستوديو عبر الخادم شهريًا",
+        "500 طلب ذكاء اصطناعي شهريًا عند التفعيل (الأرصدة منفصلة)",
+        "500 عنصر عمل محفوظ شهريًا",
+        "500 صفحة OCR و500 تحليل CSV شهريًا",
+        "750 عملية تصدير شهريًا",
+        "كل مزايا Starter",
+        "استوديو العروض التقديمية والكتب الإلكترونية",
+        "استوديو ثلاثي الأبعاد وBatch Studio",
+        "تحرير متقدم للقوالب وإعدادات علامة قابلة لإعادة الاستخدام",
+        "عملاء ومشاريع بلا حدود",
+        "دعم بريد إلكتروني ذو أولوية"
+      ]
+    }
   },
   "business": {
     "name": "Business",
@@ -195,7 +253,61 @@ window.TAMPSLAT_PLANS={
       "Centralised client and project oversight",
       "Business-priority support"
     ],
-    "desc_translations": {},
-    "feature_translations": {}
+    "desc_translations": {
+      "fr": "Une capacité supérieure pour les entreprises établies qui coordonnent plusieurs flux de travail.",
+      "pt": "Maior capacidade para empresas estabelecidas que coordenam vários fluxos de trabalho.",
+      "es": "Mayor capacidad para empresas establecidas que coordinan varios flujos de trabajo.",
+      "ar": "سعة أكبر للشركات القائمة التي تنسق مسارات عمل متعددة."
+    },
+    "feature_translations": {
+      "fr": [
+        "5 000 actions de studio côté serveur par mois",
+        "2 000 requêtes IA par mois si activées (crédits séparés)",
+        "2 000 éléments de travail enregistrés par mois",
+        "2 000 pages OCR et 2 000 analyses CSV par mois",
+        "2 500 exports par mois",
+        "Tout le contenu de Pro dans les studios disponibles",
+        "Profils d’entreprise multiples et identités de marque partagées",
+        "Modèles, listes de contrôle et dossiers opérationnels pour équipes",
+        "Suivi centralisé des clients et projets",
+        "Assistance prioritaire aux entreprises"
+      ],
+      "pt": [
+        "5.000 ações de estúdio no servidor por mês",
+        "2.000 pedidos de IA por mês quando ativo (créditos separados)",
+        "2.000 itens de trabalho guardados por mês",
+        "2.000 páginas OCR e 2.000 análises CSV por mês",
+        "2.500 exportações por mês",
+        "Tudo do Pro nos estúdios disponíveis",
+        "Vários perfis empresariais e marcas partilhadas",
+        "Modelos, listas de verificação e pacotes operacionais para equipas",
+        "Gestão centralizada de clientes e projetos",
+        "Suporte prioritário empresarial"
+      ],
+      "es": [
+        "5.000 acciones de estudio en servidor al mes",
+        "2.000 solicitudes de IA al mes si está habilitada (créditos aparte)",
+        "2.000 elementos de trabajo guardados al mes",
+        "2.000 páginas OCR y 2.000 análisis CSV al mes",
+        "2.500 exportaciones al mes",
+        "Todo lo incluido en Pro en los estudios disponibles",
+        "Varios perfiles comerciales y marcas compartidas",
+        "Plantillas, listas de control y paquetes operativos para equipos",
+        "Supervisión centralizada de clientes y proyectos",
+        "Soporte prioritario empresarial"
+      ],
+      "ar": [
+        "5,000 عملية استخدام للاستوديو عبر الخادم شهريًا",
+        "2,000 طلب ذكاء اصطناعي شهريًا عند التفعيل (الأرصدة منفصلة)",
+        "2,000 عنصر عمل محفوظ شهريًا",
+        "2,000 صفحة OCR و2,000 تحليل CSV شهريًا",
+        "2,500 عملية تصدير شهريًا",
+        "كل مزايا Pro في الاستوديوهات المتاحة",
+        "ملفات أعمال متعددة وإعدادات علامة مشتركة",
+        "قوالب وقوائم تحقق وحزم تشغيلية للفرق",
+        "متابعة مركزية للعملاء والمشاريع",
+        "دعم أعمال ذو أولوية"
+      ]
+    }
   }
 };
