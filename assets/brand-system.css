@@ -20,3 +20,25 @@ a.brand img,.public-brand img,.topbar .brand img,.top .brand img,.ops-top>a:firs
 /* Auth and compact card headers use the same full-size wordmark. */
 .auth-card>a img,.card>a img.logo,.auth-page .auth-story>a img{width:210px!important;height:48px!important;max-width:min(210px,48vw)!important;max-height:48px!important;object-fit:contain!important;object-position:left center!important;display:block!important}
 @media(max-width:720px){.auth-card>a img,.card>a img.logo,.auth-page .auth-story>a img{width:190px!important;height:44px!important;max-width:52vw!important;max-height:44px!important}}
+
+/* High-contrast theme safeguards: preserve the brand mark and readable controls in dark mode. */
+body.dark .brand img,body.dark .public-brand img,body.dark .upgrade-logo img,body.dark .auth-card img,body.dark .auth-story img{background:#fff!important;border-radius:10px!important;padding:5px!important;filter:none!important}
+body.dark{color:#f4f6ff}
+body.dark .btn.secondary,body.dark .btn.ghost,body.dark button.secondary{background:#273149!important;color:#f5f7ff!important;border-color:#56627c!important}
+body.dark input,body.dark textarea,body.dark select{background:#202b40!important;color:#f4f6ff!important;border-color:#53617a!important}
+body.dark input::placeholder,body.dark textarea::placeholder{color:#aeb8ca!important;opacity:1}
+body.dark .profile-dropdown,body.dark .profile-dropdown a,body.dark .profile-dropdown button{background:#202a3f!important;color:#f4f6ff!important;border-color:#52607a!important}
+body.dark .profile-dropdown .menu-user strong{color:#fff!important}body.dark .profile-dropdown .menu-user small{color:#c2cbe0!important}
+body.dark .profile-dropdown a:hover,body.dark .profile-dropdown button:hover{background:#35415d!important;color:#fff!important}
+body.dark .sidebar,body.dark .topbar{background:#151e32!important;border-color:#3a4862!important}
+body.dark .nav-item{color:#cbd5e8!important}body.dark .nav-item.active{background:#443b75!important;color:#fff!important}
+body.dark .help-card{background:#222d44!important;border-color:#52607a!important;color:#f4f6ff!important}
+body.dark .help-card p{color:#c1cbe0!important}body.dark .help-card button{background:#3c4770!important;color:#fff!important}
+body.dark .upgrade-page{background:#111a2b!important;color:#f5f7ff!important}
+body.dark .upgrade-header,body.dark .upgrade-footer{background:#151e32!important;border-color:#3d4b65!important;color:#e9efff!important}
+body.dark .upgrade-header nav{color:#e2e9f8!important}
+body.dark .template-card,body.dark .template-editor,body.dark .template-filters,body.dark .seo-article,body.dark .blog-toolbar{background:#202b40!important;border-color:#52607a!important;color:#f4f6ff!important}
+body.dark .template-card b,body.dark .seo-article h2,body.dark .seo-article h3{color:#fff!important}
+body.dark .template-card p,body.dark .seo-article p,body.dark .template-tip{color:#c2cbe0!important}
+body.dark .template-editor textarea{background:#111b2d!important;color:#f6f7ff!important;border-color:#7180a0!important}
+@media(max-width:720px){.upgrade-header{position:relative}.upgrade-header nav a{padding:7px 9px;border:1px solid #e2e5ef;border-radius:9px;background:#f8f9fd}body.dark .upgrade-header nav a{background:#253149;border-color:#53617a;color:#fff!important}}
