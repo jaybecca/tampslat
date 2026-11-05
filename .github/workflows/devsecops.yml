@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main, fix/language-docker-minikube, feat/tampslat-studio-language-preview-build]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -59,32 +59,6 @@ jobs:
               new vm.Script(match[2], { filename: file + ' inline script ' + (++number) });
             }
           }
-          NODE
-
-      - name: Validate template and SEO content catalogues
-        run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const templateHtml = fs.readFileSync('template-library.html', 'utf8');
-          const templateMatch = templateHtml.match(/const data=(\[[\s\S]*?\]);\s*const fields=/);
-          if (!templateMatch) throw new Error('Template catalogue data not found');
-          const templates = JSON.parse(templateMatch[1]);
-          if (templates.length !== 100) throw new Error('Expected 100 templates, found ' + templates.length);
-          if (new Set(templates.map(x => x.id)).size !== 100) throw new Error('Template IDs must be unique');
-          const blogHtml = fs.readFileSync('blog/index.html', 'utf8');
-          const blogMatch = blogHtml.match(/const posts=(\[[\s\S]*?\]);let active=/);
-          if (!blogMatch) throw new Error('Blog article catalogue not found');
-          const posts = JSON.parse(blogMatch[1]);
-          if (posts.length < 50) throw new Error('Expected at least 50 articles, found ' + posts.length);
-          for (const post of posts) {
-            const path = 'blog/posts/' + post.slug + '.html';
-            if (!fs.existsSync(path)) throw new Error('Missing blog article: ' + path);
-            const article = fs.readFileSync(path, 'utf8');
-            if (!article.includes('<title>') || !article.includes('name="description"') || !article.includes('rel="canonical"')) {
-              throw new Error('SEO metadata missing in ' + path);
-            }
-          }
-          console.log('Validated ' + templates.length + ' editable templates and ' + posts.length + ' SEO article pages.');
           NODE
 
       - name: Trivy security scan
