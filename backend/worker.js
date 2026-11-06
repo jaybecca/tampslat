@@ -223,7 +223,7 @@ async function route(req, env) {
     if(!await rateLimit(env,`verify-email:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many verification attempts. Wait a little and request a new code.',429);
     const d=await bodyJson(req,5000);if(!d)return fail('Invalid JSON.');
     const email=String(d.email||'').trim().toLowerCase(),token=String(d.token||'').trim();
-    if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||!/^[0-9]{6,10}$/.test(token))return fail('Enter your email address and the verification code.');
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!/^[0-9]{6,10}$/.test(token))return fail('Enter your email address and the verification code.');
     const auth=await supabaseRequest(env,'/auth/v1/verify',{method:'POST',body:JSON.stringify({type:'signup',email,token})});
     if(!auth)return fail('Authentication is temporarily unavailable. Please try again later or contact Support.',503);
     if(!auth.response.ok){
@@ -241,7 +241,7 @@ async function route(req, env) {
     if(!await rateLimit(env,`resend-verification:${req.headers.get('CF-Connecting-IP')||'unknown'}`,3,900))return fail('Please wait before requesting another verification email.',429);
     const d=await bodyJson(req,5000);if(!d)return fail('Invalid JSON.');
     const email=String(d.email||'').trim().toLowerCase();
-    if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||email.length>254)return fail('Enter a valid email address.');
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return fail('Enter a valid email address.');
     const auth=await supabaseRequest(env,'/auth/v1/resend',{method:'POST',body:JSON.stringify({type:'signup',email})});
     if(!auth)return fail('Authentication is temporarily unavailable. Please try again later or contact Support.',503);
     if(!auth.response.ok){if(auth.response.status===429)return fail('Please wait before requesting another verification email.',429);return fail('We could not resend the verification email. Check the address and try again.',502);}
