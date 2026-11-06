@@ -37,7 +37,6 @@
     billing:()=>request('/billing/summary',{headers:{}}),
     usage:()=>request('/usage/summary',{headers:{}}),
     adminOverview:()=>request('/admin/overview',{headers:{}}),
-    me:()=>request('/auth/me',{headers:{}}),
     adsPreference:()=>request('/ads/preference',{headers:{}}),
     setAdsPreference:(adsEnabled)=>request('/ads/preference',{method:'PUT',body:JSON.stringify({adsEnabled})}),
     adminAds:()=>request('/admin/ads',{headers:{}}),
