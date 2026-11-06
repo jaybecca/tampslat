@@ -12,3 +12,8 @@ bun.lock
 bun.lockb
 npm-shrinkwrap.json
 wrangler.toml
+
+.venv/
+.venv/**
+__pycache__/
+*.pyc
