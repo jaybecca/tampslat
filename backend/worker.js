@@ -256,12 +256,13 @@ async function route(req, env) {
       if(pref&&Number(pref.ads_enabled)===0)return json({ads:[],plan:viewer.plan,adsEnabled:false});
     }
     const rows=await env.DB.prepare("SELECT id,title,description,target_url,alt_text,placement FROM ad_campaigns WHERE enabled=1 AND placement='footer-strip' AND (start_at IS NULL OR datetime(start_at)<=datetime('now')) AND (end_at IS NULL OR datetime(end_at)>datetime('now')) ORDER BY sort_order ASC,created_at DESC LIMIT 8").all();
-    return json({ads:(rows.results||[]).map(a=>({...a,imageUrl:'/api/ads/image/'+a.id})),plan:viewer?.plan||'guest',adsEnabled:true},200,{'Cache-Control':'private, max-age=60','Vary':'Cookie'});
+    return json({ads:(rows.results||[]).map(a=>({...a,imageUrl:'/api/ads/image/'+a.id})),plan:viewer?.plan||'guest',adsEnabled:true},200,{'Vary':'Cookie'});
   }
   const publicAdImage=path.match(/^\/api\/ads\/image\/([a-f0-9-]{36})$/i);
   if(publicAdImage&&req.method==='GET'){
-    const row=await env.DB.prepare('SELECT image_key,mime_type FROM ad_campaigns WHERE id=? AND enabled=1').bind(publicAdImage[1]).first();
+    const row=await env.DB.prepare('SELECT image_key,mime_type,enabled FROM ad_campaigns WHERE id=?').bind(publicAdImage[1]).first();
     if(!row||!env.FILES)return fail('Advert image not found.',404);
+    if(!row.enabled){const viewer=await currentUser(req,env);if(viewer?.role!=='admin')return fail('Advert image not found.',404);}
     const object=await env.FILES.get(row.image_key);if(!object)return fail('Advert image not found.',404);
     return new Response(object.body,{headers:{'Content-Type':row.mime_type||object.httpMetadata?.contentType||'application/octet-stream','Cache-Control':'public, max-age=3600','X-Content-Type-Options':'nosniff'}});
   }
