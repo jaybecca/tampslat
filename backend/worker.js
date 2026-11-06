@@ -107,7 +107,7 @@ async function releaseToolUsage(req,env,user) {
   return json({ok:true,released:true});
 }
 function configuredAdminEmails(env) {
-  return new Set(String(env.admin_email || '').split(/[;,\\s]+/).map(value=>value.trim().toLowerCase()).filter(Boolean));
+  return new Set(String(env.admin_email || '').split(/[;,\s]+/).map(value=>value.trim().toLowerCase()).filter(Boolean));
 }
 async function syncAdminRole(env, user) {
   if (!user?.id || !user?.email) return user;
@@ -198,7 +198,7 @@ async function aiRefine(req,env,user){
   if(prompt.length<4||prompt.length>1000)return fail('Describe the improvement in 4 to 1,000 characters.');
   const source=data.artifact&&typeof data.artifact==='object'?data.artifact:{};
   const imageDataUrl=String(source.imageDataUrl||'');
-  if(imageDataUrl && (!/^data:image\\/(?:png|jpeg|webp);base64,/i.test(imageDataUrl) || imageDataUrl.length>5*1024*1024))return fail('Use a PNG, JPEG or WebP image smaller than 3.7 MB.');
+  if(imageDataUrl && (!/^data:image\/(?:png|jpeg|webp);base64,/i.test(imageDataUrl) || imageDataUrl.length>5*1024*1024))return fail('Use a PNG, JPEG or WebP image smaller than 3.7 MB.');
   const artifact={html:String(source.html||'').slice(0,8000),text:String(source.text||'').slice(0,8000),hasImage:Boolean(imageDataUrl)};
   if(!artifact.html&&!artifact.text&&!imageDataUrl)return fail('Upload an image or create/load content before requesting an AI refinement.');
   const preferences=data.preferences&&typeof data.preferences==='object'?data.preferences:{};
