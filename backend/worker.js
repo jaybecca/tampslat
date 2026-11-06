@@ -251,7 +251,7 @@ async function route(req, env) {
   if(!env.DB)return fail('Service is temporarily unavailable. Please try again later or contact Support.',503);
   if(path==='/api/auth/google'&&req.method==='GET'){
     if(!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return fail('Google sign-in is not configured yet. Please use email sign-in or contact Support.',503);
-    const authorize=new URL('/auth/v1/authorize',String(env.SUPABASE_URL).replace(/\\/+$/,''));
+    const authorize=new URL('/auth/v1/authorize',String(env.SUPABASE_URL));
     authorize.searchParams.set('provider','google');
     authorize.searchParams.set('redirect_to',authRedirect(req,env,'/auth-confirmed.html'));
     authorize.searchParams.set('scopes','openid email profile');
@@ -387,7 +387,10 @@ async function route(req, env) {
   if(path==='/api/auth/logout'&&req.method==='POST'){
     const token=cookie(req,'tampslat_session');if(token)await env.DB.prepare('DELETE FROM sessions WHERE token_hash=?').bind(await sha256(token)).run();return json({ok:true},200,{'Set-Cookie':clearCookie()});
   }
-  if(path==='/api/auth/me'&&req.method==='GET'){const u=await currentUser(req,env);return u?json({user:safeUser(u)}):fail('Not signed in.',401);}
+  if(path==='/api/auth/me'&&req.method==='GET'){
+    try{const u=await currentUser(req,env);return u?json({user:safeUser(u)}):fail('Not signed in.',401);}
+    catch(error){console.error('TAMPslat session lookup failed',{name:error?.name||'Error',message:error?.message||'unknown'});return fail('We could not verify your workspace session. Please sign in again.',503);}
+  }
   const user=await currentUser(req,env);if(!user)return fail('Sign in to use this feature.',401);
   const billingResponse=await handleBilling(req,env,user,path);if(billingResponse)return billingResponse;
   if(path==='/api/admin/overview'&&req.method==='GET'){
