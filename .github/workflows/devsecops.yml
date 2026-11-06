@@ -108,6 +108,41 @@ jobs:
           }
           NODE
 
+      - name: Validate display currencies, regional checkout and email OTP
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const currencies = ['NGN', 'USD', 'GBP', 'EUR', 'CAD'];
+          for (const file of ['index.html', 'pricing.html']) {
+            const html = fs.readFileSync(file, 'utf8');
+            for (const currency of currencies) {
+              if (!html.includes('value="' + currency + '"')) {
+                throw new Error(file + ': missing display currency ' + currency);
+              }
+            }
+          }
+          const landing = fs.readFileSync('landing.js', 'utf8');
+          const pricing = fs.readFileSync('pricing.html', 'utf8');
+          if (!landing.includes('function checkoutCurrencyFor') || !landing.includes('currency:paymentCurrency')) {
+            throw new Error('Homepage must preserve display currency and normalize payment currency by region');
+          }
+          if (!pricing.includes('function checkoutCurrencyFor') || !pricing.includes('currency:paymentCurrency')) {
+            throw new Error('Pricing page must preserve display currency and normalize payment currency by region');
+          }
+          const signup = fs.readFileSync('signup.html', 'utf8');
+          const worker = fs.readFileSync('backend/worker.js', 'utf8');
+          const otpGuide = fs.readFileSync('docs/email-verification-otp.md', 'utf8');
+          if (!signup.includes('startResendCooldown') || !signup.includes('resendCooldownUntil')) {
+            throw new Error('Signup page must enforce the resend cooldown');
+          }
+          if (!worker.includes('resend-verification') || !worker.includes('3,900')) {
+            throw new Error('Worker resend endpoint must enforce the 3-per-15-minute limit');
+          }
+          if (!otpGuide.includes('1800 seconds') || !otpGuide.includes('{{ .Token }}')) {
+            throw new Error('OTP setup guide must document 30-minute OTP and token template');
+          }
+          NODE
+
       - name: Trivy security scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
