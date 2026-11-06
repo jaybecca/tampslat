@@ -305,7 +305,7 @@ async function route(req, env) {
     if(!auth.response.ok) {
       const message=String(auth.data?.msg||auth.data?.message||'');
       const code=String(auth.data?.code||auth.data?.error_code||'');
-      if(code==='email_not_confirmed' || /email not confirmed|email_not_confirmed/i.test(message))return fail('Please verify your email using the link we sent before signing in.',403);
+      if(code==='email_not_confirmed' || /email not confirmed|email_not_confirmed/i.test(message))return fail('Please verify your email using the one-time code we sent before signing in.',403);
       if(auth.response.status===429)return fail('Too many sign-in attempts. Please try again later.',429);
       return fail('Email or password is incorrect.',401);
     }
