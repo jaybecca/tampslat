@@ -25,8 +25,10 @@ async function finishEmailLink(){
 }
 (async()=>{
  try{
-  if(params.has('code')||params.has('error_description')||sessionStorage.getItem('tampslat_google_oauth_pending')==='1'&&params.has('error')){await finishGoogle();return;}
+  const googlePending=sessionStorage.getItem('tampslat_google_oauth_pending')==='1';
+  if(googlePending&&(params.has('code')||params.has('error')||params.has('error_description'))){await finishGoogle();return;}
   if(await finishEmailLink())return;
+  if(params.has('error_description')||params.has('error'))throw new Error(params.get('error_description')||'The confirmation link could not be completed.');
   if(hash.get('error_description'))throw new Error(hash.get('error_description'));
- }catch(error){showError(error);}
+ }catch(error){sessionStorage.removeItem('tampslat_google_oauth_pending');sessionStorage.removeItem('tampslat_google_oauth_next');showError(error);}
 })();
