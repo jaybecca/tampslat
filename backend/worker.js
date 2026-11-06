@@ -437,7 +437,7 @@ async function route(req, env) {
     if(user.role!=='admin')return fail('Administrator access required.',403);
     const d=await bodyJson(req,3000000);if(!d)return fail('Invalid advert details.');
     const title=String(d.title||'').trim().slice(0,100),description=String(d.description||'').trim().slice(0,180),altText=String(d.altText||title).trim().slice(0,140);
-    let targetUrl='';try{const u=new URL(String(d.targetUrl||''));if(u.protocol!=='https:')throw new Error();targetUrl=u.toString();}catch{return fail('Use a valid HTTPS destination link.');}
+    const targetUrl=''; // Display-only banners do not need a click-through destination.
     const mime=String(d.mimeType||'');if(!['image/jpeg','image/png','image/webp'].includes(mime))return fail('Upload a JPG, PNG or WebP image.');
     const encoded=String(d.imageBase64||'');if(!title||encoded.length<100||encoded.length>2800000)return fail('Add a title and an image smaller than 2 MB.');
     let bytes;try{const raw=atob(encoded);if(raw.length>2097152)return fail('Image must be 2 MB or smaller.');bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);}catch{return fail('The image upload could not be read.');}
