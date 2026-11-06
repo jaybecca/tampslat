@@ -124,7 +124,9 @@ function safeUser(u) { return { id:u.id,email:u.email,plan:u.plan,role:u.role,cr
 async function supabaseRequest(env, path, options={}) {
   if(!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY) return null;
   const headers={ apikey:env.SUPABASE_PUBLISHABLE_KEY, 'Content-Type':'application/json', ...(options.headers||{}) };
-  const response=await fetch(`${String(env.SUPABASE_URL).replace(/\/+$/,'')}${path}`,{...options,headers});
+  let response;
+  try{response=await fetch(`${String(env.SUPABASE_URL).replace(/\\/+$/,'')}${path}`,{...options,headers});}
+  catch(error){console.error('TAMPslat Supabase Auth request failed',{path,name:error?.name||'Error',message:error?.message||'unknown'});return null;}
   const raw=await response.text(); let data={}; try{data=raw?JSON.parse(raw):{}}catch{}
   return {response,data};
 }
