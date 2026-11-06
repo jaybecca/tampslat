@@ -40,3 +40,19 @@ The OTP expiry setting also governs other email OTP and confirmation flows. Keep
 - Invalid, expired and already-used codes are rejected.
 
 **Important:** the dashboard email-template change is separate from GitHub deployment. Until the Confirm signup template is changed to use `{{ .Token }}`, Supabase will continue sending its existing confirmation-link email and the code-entry flow will not receive a code.
+
+
+## Production email delivery (required)
+
+A successful signup API response means Supabase Auth accepted the request; it does not prove that the message reached the mailbox. For reliable production delivery, configure a custom SMTP provider in **Authentication → SMTP Settings**. Use the SMTP hostname, port, username, and password supplied by the mailbox provider; use the full mailbox address as the SMTP username and a sender address on a domain you control. Save the settings and use Supabase's test-email option before testing signup again. Check spam/quarantine and the SMTP provider's delivery log if a test message is accepted but not visible.
+
+Do not put an SMTP password in GitHub, the Worker, browser code, or wrangler.toml.
+
+## Google sign-in setup
+
+1. In **Authentication → Sign In / Providers → Google**, enable Google and enter the Google OAuth client ID and client secret.
+2. In Google Cloud Console, register this authorized redirect URI: `https://qqfmsvepxxagszzhhjap.supabase.co/auth/v1/callback`.
+3. In **Authentication → URL Configuration**, set the Site URL to `https://tampslat.tampconsulting.space` and allow `https://tampslat.tampconsulting.space/**`.
+4. Save the provider settings. The app returns to `/auth-oauth.html`, verifies the Supabase access token on the Worker, and then creates the TAMPslat session.
+
+The Google client secret belongs only in the Supabase dashboard. The browser uses the public publishable key; it must never receive the Google client secret or a Supabase service-role key.

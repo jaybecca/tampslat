@@ -132,6 +132,8 @@ function authRedirect(req,env,path) {
   const base=String(env.APP_ORIGIN||new URL(req.url).origin).split(',')[0].trim();
   return new URL(path,base).toString();
 }
+const AUTH_NEXT_PATHS = /^(tools\.html|index\.html|studios\.html|template-library\.html|font-studio\.html|presentation-studio\.html|3d-web-studio\.html|document-converter\.html|ebook-studio\.html|ai-studio\.html|batch-studio\.html|business-operations-studio\.html|design-studio\.html|document-studio\.html|file-studio\.html|pdf-studio\.html|spreadsheet-studio\.html|vault-studio\.html|zip-studio\.html|vault\.html|sheets\.html)(#.*)?$/;
+function safeAuthNext(value) { const next=String(value||'tools.html'); return AUTH_NEXT_PATHS.test(next)?next:'tools.html'; }
 async function provisionSupabaseUser(env, authUser) {
   const id=String(authUser?.id||''), email=String(authUser?.email||'').trim().toLowerCase();
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) || !email) throw new Error('invalid_supabase_identity');
@@ -251,6 +253,36 @@ async function route(req, env) {
   if(!env.DB)return fail('Service is temporarily unavailable. Please try again later or contact Support.',503);
   if(path==='/api/webhooks/flutterwave'&&req.method==='POST')return handleBilling(req,env,null,path);if(path==='/api/webhooks/paddle'&&req.method==='POST')return handleBilling(req,env,null,path);
 
+  if(path==='/api/auth/google'&&req.method==='GET'){
+    if(!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return fail('Google sign-in is not configured yet. Please use email sign-in or contact Support.',503);
+    const callback=new URL(authRedirect(req,env,'/auth-oauth.html'));
+    callback.searchParams.set('next',safeAuthNext(url.searchParams.get('next')));
+    const authorize=new URL('/auth/v1/authorize',String(env.SUPABASE_URL).replace(/\/+$/,''));
+    authorize.searchParams.set('provider','google');
+    authorize.searchParams.set('redirect_to',callback.toString());
+    authorize.searchParams.set('apikey',env.SUPABASE_PUBLISHABLE_KEY);
+    return new Response(null,{status:302,headers:{Location:authorize.toString(),'Cache-Control':'no-store'}});
+  }
+  if(path==='/api/auth/oauth'&&req.method==='POST'){
+    if(!await rateLimit(env,`oauth:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many sign-in attempts. Try again later.',429);
+    const d=await bodyJson(req,12000);if(!d)return fail('Invalid JSON.');
+    const accessToken=String(d.accessToken||'');
+    if(accessToken.length<40||accessToken.length>10000)return fail('Google sign-in did not return a valid session. Please try again.',401);
+    const auth=await supabaseRequest(env,'/auth/v1/user',{method:'GET',headers:{Authorization:`Bearer ${accessToken}`}});
+    if(!auth)return fail('Authentication is temporarily unavailable. Please try again later or contact Support.',503);
+    if(!auth.response.ok)return fail('Google sign-in could not be verified. Please try again.',401);
+    const authUser=auth.data;
+    if(!authUser?.id||!authUser?.email)return fail('Google did not provide a verified email address. Please use email sign-in.',401);
+    let user;
+    try{user=await provisionSupabaseUser(env,authUser);}
+    catch(e){
+      console.error('TAMPslat Google identity provisioning failed',{name:e?.name||'Error',reason:e?.message||'unknown'});
+      if(e?.message==='account_link_conflict')return fail('This email is linked to an existing application account. Sign in with that account or contact Support.',409);
+      return fail('Google sign-in succeeded, but workspace setup did not finish. Please try again or contact Support.',500);
+    }
+    const token=await newSession(env,user.id,false);
+    return json({user:safeUser(user)},200,{'Set-Cookie':sessionCookie(token,null)});
+  }
   if(path==='/api/auth/signup'&&req.method==='POST'){
     if(!await rateLimit(env,`signup:${req.headers.get('CF-Connecting-IP')||'unknown'}`,8,3600))return fail('Too many account attempts. Try again later.',429);
     const d=await bodyJson(req,5000);if(!d)return fail('Invalid JSON.');
@@ -266,7 +298,16 @@ async function route(req, env) {
       console.error('TAMPslat Supabase signup rejected',{status:auth.response.status,code:String(auth.data?.code||auth.data?.error_code||'')});
       return fail('We could not create your account. Check the details and try again.',400);
     }
-    return json({ok:true,message:'Your account request has been received. Check your inbox for the six-digit email verification code.'},201);
+    const createdUser=auth.data?.user;
+    if(createdUser && Array.isArray(createdUser.identities) && createdUser.identities.length===0){
+      if(createdUser.email_confirmed_at||createdUser.confirmed_at)return fail('An account with this email is already verified. Sign in instead, or use Forgot password if needed.',409);
+      if(!await rateLimit(env,`resend-verification:${req.headers.get('CF-Connecting-IP')||'unknown'}`,3,900))return fail('An account already exists but is not verified. Wait before requesting another code, then use Resend verification code.',429);
+      const resent=await supabaseRequest(env,'/auth/v1/resend',{method:'POST',body:JSON.stringify({type:'signup',email})});
+      if(!resent)return fail('Authentication is temporarily unavailable. Please try again later or contact Support.',503);
+      if(!resent.response.ok){console.error('TAMPslat existing-account verification resend failed',{status:resent.response.status,code:String(resent.data?.code||resent.data?.error_code||'')});return fail('An account already exists but is not verified. We could not request a new email code right now. Check the email delivery settings or try again later.',502);}
+      return json({ok:true,message:'An unverified account already exists. A fresh verification-code request was accepted; check your inbox and spam folder.'},200);
+    }
+    return json({ok:true,message:'Your signup request was accepted. Check your inbox and spam folder for the six-digit verification code. If it does not arrive, use Resend verification code.'},201);
   }
   if(path==='/api/auth/verify-email'&&req.method==='POST'){
     if(!await rateLimit(env,`verify-email:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many verification attempts. Wait a little and request a new code.',429);

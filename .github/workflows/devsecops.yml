@@ -47,7 +47,7 @@ jobs:
           const vm = require('node:vm');
           const files = [
             'index.html', 'pricing.html', 'support.html', 'template-library.html', 'blog/index.html', 'login.html',
-            'signup.html', 'tools.html', 'document-studio.html', 'business-operations-studio.html', 'zip-studio.html',
+            'signup.html', 'auth-oauth.html', 'tools.html', 'document-studio.html', 'business-operations-studio.html', 'zip-studio.html',
             'file-studio.html', 'pdf-studio.html', 'document-converter.html', 'vault-studio.html', 'spreadsheet-studio.html',
             'batch-studio.html', 'design-studio.html', 'presentation-studio.html', 'font-studio.html', '3d-web-studio.html',
             'ebook-studio.html', 'ai-studio.html'

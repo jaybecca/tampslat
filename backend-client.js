@@ -14,6 +14,7 @@
     recover:(email)=>request('/auth/recover',{method:'POST',body:JSON.stringify({email})}),
     updatePassword:(accessToken,password)=>request('/auth/update-password',{method:'POST',body:JSON.stringify({accessToken,password})}),
     login:(email,password,rememberMe=false)=>request('/auth/login',{method:'POST',body:JSON.stringify({email,password,rememberMe})}),
+    oauth:(accessToken)=>request('/auth/oauth',{method:'POST',body:JSON.stringify({accessToken})}),
     verifyEmail:(email,token)=>request('/auth/verify-email',{method:'POST',body:JSON.stringify({email,token})}),
     resendVerification:(email)=>request('/auth/resend-verification',{method:'POST',body:JSON.stringify({email})}),
     logout:()=>request('/auth/logout',{method:'POST',body:'{}'}),
