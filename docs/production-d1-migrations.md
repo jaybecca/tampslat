@@ -29,3 +29,7 @@ Do not manually repeat SQL that is already recorded in `d1_migrations`. Do not r
 ## Production repair performed 2026-11-06
 
 The live `tampslat-db` database had only `0001_init.sql` recorded. Migrations `0002_billing.sql`, `0003_usage_tracking.sql`, `0004_annual_billing.sql`, `0005_per_tool_usage.sql`, and `0006_usage_account_counters.sql` were applied in order and recorded in `d1_migrations`. The production `users` table now includes the billing columns expected by the Worker, and the usage and tool-usage tables exist.
+
+## Advertising administration migration (0007)
+
+The admin-managed banner system adds the additive migration `0007_advertising.sql`. Apply it using the same production procedure above **before** deploying the Worker release that contains `/api/ads/*` routes. It creates `ad_campaigns` and `ad_preferences`; campaign artwork uses the existing `FILES` R2 bucket. No new Cloudflare service or paid add-on is introduced.
