@@ -138,6 +138,7 @@ jobs:
           const google = fs.readFileSync('auth-google.js', 'utf8');
           const callback = fs.readFileSync('auth-confirmed.js', 'utf8');
           const otpGuide = fs.readFileSync('docs/email-verification-otp.md', 'utf8');
+          const migrationGuide = fs.readFileSync('docs/production-d1-migrations.md', 'utf8');
           if (!signup.includes('startResendCooldown') || !signup.includes('resendCooldownUntil')) {
             throw new Error('Signup page must enforce the resend cooldown');
           }
@@ -155,6 +156,9 @@ jobs:
           }
           if (!callback.includes('exchangeCodeForSession') || !callback.includes('emailLinkSession')) {
             throw new Error('Auth callback must complete Google and email-link sessions');
+          }
+          if (!migrationGuide.includes('npx wrangler d1 migrations apply tampslat-db --remote')) {
+            throw new Error('Production D1 migration instructions must be documented before Worker releases');
           }
           NODE
 
