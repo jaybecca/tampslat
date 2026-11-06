@@ -40,3 +40,30 @@ The OTP expiry setting also governs other email OTP and confirmation flows. Keep
 - Invalid, expired and already-used codes are rejected.
 
 **Important:** the dashboard email-template change is separate from GitHub deployment. Use `{{ .Token }}` for the recommended code-first flow. The fallback link handler keeps accounts usable if the template still sends `{{ .ConfirmationURL }}`.
+
+
+## Production SMTP setup for Hostinger Email
+
+Supabase Auth needs an SMTP provider for dependable production delivery. In the Supabase dashboard, open **Authentication → SMTP Settings**, enable custom SMTP, and use the settings for the mailbox you want TAMPslat to send from:
+
+- **SMTP host:** `smtp.hostinger.com`
+- **Port:** `465`
+- **Encryption:** SSL/TLS
+- **Username:** the full Hostinger mailbox address
+- **Password:** that mailbox's email password
+- **Sender email:** the same mailbox address
+- **Sender name:** `TAMPslat`
+
+If port 465 has an encryption/connectivity issue, Hostinger also documents port `587` with TLS/STARTTLS. Confirm the exact settings in Hostinger hPanel under **Emails → Manage → Connect Apps & Devices**. After saving SMTP settings in Supabase, use its test-email function and check the provider's delivery logs before retesting signup.
+
+Never put the mailbox password in GitHub, Worker variables, browser JavaScript, or wrangler.toml.
+
+## Google OAuth provider setup
+
+1. In Supabase, open **Authentication → Sign In / Providers → Google** and enable Google.
+2. Create or select a **Web application** OAuth client in Google Cloud Console.
+3. Add this **Authorized redirect URI** in Google Cloud Console: `https://qqfmsvepxxagszzhhjap.supabase.co/auth/v1/callback`.
+4. Copy the Google **Client ID** and **Client Secret** into the Google provider fields in Supabase. Keep the secret in Supabase only.
+5. In Supabase **Authentication → URL Configuration**, keep the Site URL as `https://tampslat.tampconsulting.space` and allow `https://tampslat.tampconsulting.space/**`. This covers the app's `/auth-confirmed.html` callback.
+
+The Google Cloud redirect URI is the Supabase Auth callback above, not the TAMPslat page URL. The TAMPslat page URL is configured separately in Supabase's redirect allow-list.
