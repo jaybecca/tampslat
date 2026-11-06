@@ -47,8 +47,17 @@ async function recordUsage(env,user,feature,period,metadata={}) {
   await env.DB.prepare('INSERT INTO usage_events(id,user_id,period_key,feature,metadata_json) VALUES(?,?,?,?,?)').bind(uid(),user.id,period,feature,JSON.stringify(metadata)).run();
 }
 const TOOL_KEYS = new Set(['document-studio','business-operations-studio','template-library','document-converter','pdf-studio','zip-studio','file-studio','vault-studio','spreadsheet-studio','batch-studio','design-studio','presentation-studio','font-studio','3d-web-studio','ebook-studio','ai-studio']);
+async function releaseStaleToolReservations(env,user,period) {
+  // A closed tab or lost network response must not permanently consume a use.
+  // Pending reservations older than two hours are treated as abandoned.
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE tool_usage_counters SET used=MAX(0,used-(SELECT COUNT(*) FROM tool_usage_reservations r WHERE r.user_id=? AND r.period_key=? AND r.tool_key=tool_usage_counters.tool_key AND r.status='pending' AND r.created_at < datetime('now','-2 hours')),updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND period_key=? AND EXISTS(SELECT 1 FROM tool_usage_reservations r WHERE r.user_id=? AND r.period_key=? AND r.tool_key=tool_usage_counters.tool_key AND r.status='pending' AND r.created_at < datetime('now','-2 hours'))`).bind(user.id,period,user.id,period,user.id,period),
+    env.DB.prepare(`UPDATE tool_usage_reservations SET status='released' WHERE user_id=? AND period_key=? AND status='pending' AND created_at < datetime('now','-2 hours')`).bind(user.id,period)
+  ]);
+}
 async function usageSnapshot(env,user) {
   const period=usagePeriod(),limits=PLAN_LIMITS[user.plan]||PLAN_LIMITS.free;
+  await releaseStaleToolReservations(env,user,period);
   const results=await Promise.all([
     env.DB.prepare('SELECT feature,used FROM usage_counters WHERE user_id=? AND period_key=?').bind(user.id,period).all(),
     env.DB.prepare("SELECT COUNT(*) AS requests,COALESCE(SUM(-amount),0) AS credits_spent FROM credit_ledger WHERE user_id=? AND event_type IN ('ai_usage','ai_refinement') AND substr(created_at,1,7)=?").bind(user.id,period).first(),
@@ -64,7 +73,9 @@ async function reserveToolUsage(req,env,user) {
   const data=await bodyJson(req,3000);if(!data)return fail('Invalid tool-use request.');
   const toolKey=String(data.toolKey||'');
   if(!TOOL_KEYS.has(toolKey))return fail('Unknown tool.',400);
-  const period=usagePeriod(),limit=user.plan==='free'?5:2147483647;
+  const period=usagePeriod();
+  await releaseStaleToolReservations(env,user,period);
+  const limit=user.plan==='free'?5:2147483647;
   const row=await env.DB.prepare('INSERT INTO tool_usage_counters(user_id,period_key,tool_key,used) VALUES(?,?,?,1) ON CONFLICT(user_id,period_key,tool_key) DO UPDATE SET used=used+1,updated_at=CURRENT_TIMESTAMP WHERE used < ? RETURNING used').bind(user.id,period,toolKey,limit).first();
   if(!row)return fail('You have used all 5 free operations for this tool this month. Your allowance resets on the first day of next month (UTC).',429);
   const reservationId=uid();
