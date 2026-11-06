@@ -124,7 +124,9 @@ function safeUser(u) { return { id:u.id,email:u.email,plan:u.plan,role:u.role,cr
 async function supabaseRequest(env, path, options={}) {
   if(!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY) return null;
   const headers={ apikey:env.SUPABASE_PUBLISHABLE_KEY, 'Content-Type':'application/json', ...(options.headers||{}) };
-  const response=await fetch(`${String(env.SUPABASE_URL).replace(/\/+$/,'')}${path}`,{...options,headers});
+  let response;
+  try{response=await fetch(`${env.SUPABASE_URL}${path}`,{...options,headers});}
+  catch(error){console.error('TAMPslat Supabase Auth request failed',{path,name:error?.name||'Error',message:error?.message||'unknown'});return null;}
   const raw=await response.text(); let data={}; try{data=raw?JSON.parse(raw):{}}catch{}
   return {response,data};
 }
@@ -249,8 +251,35 @@ async function route(req, env) {
   }
   if(path==='/api/health'&&req.method==='GET')return json({ok:true,service:'tampslat-api',time:new Date().toISOString(),features:{auth:true,ai:Boolean(env.OPENAI_API_KEY),ocr:true,database:Boolean(env.DB)}});
   if(!env.DB)return fail('Service is temporarily unavailable. Please try again later or contact Support.',503);
+  if(path==='/api/auth/google'&&req.method==='GET'){
+    if(!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return fail('Google sign-in is not configured yet. Please use email sign-in or contact Support.',503);
+    const authorize=new URL('/auth/v1/authorize',String(env.SUPABASE_URL));
+    authorize.searchParams.set('provider','google');
+    authorize.searchParams.set('redirect_to',authRedirect(req,env,'/auth-confirmed.html'));
+    authorize.searchParams.set('scopes','openid email profile');
+    return Response.redirect(authorize.toString(),302);
+  }
+
   if(path==='/api/webhooks/flutterwave'&&req.method==='POST')return handleBilling(req,env,null,path);if(path==='/api/webhooks/paddle'&&req.method==='POST')return handleBilling(req,env,null,path);
 
+  if(path==='/api/auth/session'&&req.method==='POST'){
+    if(!await rateLimit(env,`auth-session:${req.headers.get('CF-Connecting-IP')||'unknown'}`,15,900))return fail('Too many sign-in attempts. Please wait and try again.',429);
+    const d=await bodyJson(req,12000);if(!d)return fail('Invalid session request.');
+    const accessToken=String(d.accessToken||'');
+    if(accessToken.length<20||accessToken.length>10000)return fail('The sign-in response was incomplete. Please try again.',401);
+    const auth=await supabaseRequest(env,'/auth/v1/user',{method:'GET',headers:{Authorization:`Bearer ${accessToken}`}});
+    if(!auth)return fail('Authentication is temporarily unavailable. Please try again later.',503);
+    if(!auth.response.ok)return fail('Your sign-in could not be verified. Please try again.',401);
+    const authUser=auth.data?.user||auth.data;
+    if(!authUser||!(authUser.email_confirmed_at||authUser.confirmed_at))return fail('Your email identity could not be confirmed. Please contact Support.',403);
+    let user;
+    try{user=await provisionSupabaseUser(env,authUser);}
+    catch(e){console.error('TAMPslat OAuth identity provisioning failed',{name:e?.name||'Error',reason:e?.message||'unknown'});return fail('Your identity was verified, but workspace setup did not finish. Please try again.',500);}
+    try{
+      const token=await newSession(env,user.id,false);
+      return json({user:safeUser(user),message:'Your account is ready.'},200,{'Set-Cookie':sessionCookie(token,null)});
+    }catch(e){console.error('TAMPslat OAuth session creation failed',{name:e?.name||'Error',reason:e?.message||'unknown'});return fail('Your identity was verified, but we could not start your workspace session. Please try again.',503);}
+  }
   if(path==='/api/auth/signup'&&req.method==='POST'){
     if(!await rateLimit(env,`signup:${req.headers.get('CF-Connecting-IP')||'unknown'}`,8,3600))return fail('Too many account attempts. Try again later.',429);
     const d=await bodyJson(req,5000);if(!d)return fail('Invalid JSON.');
@@ -266,7 +295,15 @@ async function route(req, env) {
       console.error('TAMPslat Supabase signup rejected',{status:auth.response.status,code:String(auth.data?.code||auth.data?.error_code||'')});
       return fail('We could not create your account. Check the details and try again.',400);
     }
-    return json({ok:true,message:'Your account request has been received. Check your inbox for the six-digit email verification code.'},201);
+    const createdUser=auth.data?.user;
+    const identities=Array.isArray(createdUser?.identities)?createdUser.identities:null;
+    const alreadyVerified=Boolean(createdUser?.email_confirmed_at||createdUser?.confirmed_at);
+    const alreadyRegistered=alreadyVerified||(identities!==null&&identities.length===0);
+    if(alreadyRegistered){
+      return json({ok:true,alreadyRegistered:true,alreadyVerified,message:alreadyVerified?'This email is already verified. Sign in instead.':'An account or pending signup already exists for this email. Use the resend option if you still need to verify it.'},200);
+    }
+    if(!createdUser)return fail('The authentication service did not return an account. Please try again.',502);
+    return json({ok:true,message:'Your signup request was accepted by the authentication service. Check your inbox and spam folder for a confirmation link or code. Email delivery is not confirmed by this response.'},201);
   }
   if(path==='/api/auth/verify-email'&&req.method==='POST'){
     if(!await rateLimit(env,`verify-email:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many verification attempts. Wait a little and request a new code.',429);
@@ -319,8 +356,14 @@ async function route(req, env) {
       if(e?.message==='account_link_conflict')return fail('This email is linked to an existing application account. Contact support to complete account linking.',409);
       return fail('Your identity was verified, but we could not finish setting up your workspace. Please try again.',500);
     }
-    const rememberMe=d.rememberMe===true,token=await newSession(env,user.id,rememberMe);
-    return json({user:safeUser(user)},200,{'Set-Cookie':sessionCookie(token,rememberMe?sessionLifetime(true):null)});
+    const rememberMe=d.rememberMe===true;
+    try{
+      const token=await newSession(env,user.id,rememberMe);
+      return json({user:safeUser(user)},200,{'Set-Cookie':sessionCookie(token,rememberMe?sessionLifetime(true):null)});
+    }catch(e){
+      console.error('TAMPslat password session creation failed',{name:e?.name||'Error',reason:e?.message||'unknown'});
+      return fail('Your password was accepted, but we could not start your workspace session. Please try again.',503);
+    }
   }
   if(path==='/api/auth/recover'&&req.method==='POST'){
     if(!await rateLimit(env,`recover:${req.headers.get('CF-Connecting-IP')||'unknown'}`,5,3600))return fail('Please wait before requesting another password reset.',429);
@@ -346,7 +389,10 @@ async function route(req, env) {
   if(path==='/api/auth/logout'&&req.method==='POST'){
     const token=cookie(req,'tampslat_session');if(token)await env.DB.prepare('DELETE FROM sessions WHERE token_hash=?').bind(await sha256(token)).run();return json({ok:true},200,{'Set-Cookie':clearCookie()});
   }
-  if(path==='/api/auth/me'&&req.method==='GET'){const u=await currentUser(req,env);return u?json({user:safeUser(u)}):fail('Not signed in.',401);}
+  if(path==='/api/auth/me'&&req.method==='GET'){
+    try{const u=await currentUser(req,env);return u?json({user:safeUser(u)}):fail('Not signed in.',401);}
+    catch(error){console.error('TAMPslat session lookup failed',{name:error?.name||'Error',message:error?.message||'unknown'});return fail('We could not verify your workspace session. Please sign in again.',503);}
+  }
   const user=await currentUser(req,env);if(!user)return fail('Sign in to use this feature.',401);
   const billingResponse=await handleBilling(req,env,user,path);if(billingResponse)return billingResponse;
   if(path==='/api/admin/overview'&&req.method==='GET'){
