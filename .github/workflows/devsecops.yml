@@ -87,7 +87,7 @@ jobs:
           if (!fs.readFileSync('admin.html','utf8').includes('1200 × 160 px') || !fs.readFileSync('admin.html','utf8').includes('createAdminAd')) throw new Error('Admin advert uploader must show image dimensions and support uploads');
           if (!fs.readFileSync('settings.html','utf8').includes('setAdsPreference')) throw new Error('Plan-based advert preferences must be available in settings');
           if (client.includes('tampslat-api')) throw new Error('Frontend must not depend on the retired API Worker');
-          for (const url of ['https://tampops.tampconsulting.space','https://education.tampconsulting.space','https://www.tampconsulting.space']) if (!promo.includes(url)) throw new Error('Missing configured TAMP product promotion: ' + url);
+          if (!promo.includes('Sponsored promotions') || !promo.includes('noopener noreferrer sponsored')) throw new Error('Admin-managed advert strip must remain clearly labelled and use safe external links');
           NODE
 
       - name: Validate D1 migration chain
