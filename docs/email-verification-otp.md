@@ -2,6 +2,15 @@
 
 The TAMPslat signup flow now asks users to enter a one-time email code. This avoids a known email-link problem: some mailbox security scanners prefetch confirmation URLs before the recipient opens the message, which can consume a one-time link immediately.
 
+## Production redirect URL settings
+
+In **Authentication → URL Configuration**, use the production site address:
+
+- **Site URL:** `https://tampslat.tampconsulting.space`
+- **Additional Redirect URLs:** `https://tampslat.tampconsulting.space/**`
+
+The Worker builds signup and password-recovery redirects from the production `APP_ORIGIN` in `wrangler.toml`. Do not leave localhost as the production Site URL or as the only allowed redirect. Keep localhost entries only if you separately need local development.
+
 ## Supabase Dashboard settings
 
 1. Open **Authentication → Sign In / Providers → Email**.
