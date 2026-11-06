@@ -1,16 +1,18 @@
-/* TAMPslat browser-to-Worker client. Set TAMPSLAT_API_BASE only if API is hosted separately. */
+/* TAMPslat browser-to-Worker client. The main Worker serves the site and /api on one origin. */
 (() => {
   const base = String(window.TAMPSLAT_API_BASE || '').replace(/\/$/, '');
   async function request(path, options={}) {
     const response = await fetch(`${base}/api${path}`, { credentials:'include', ...options, headers:{ ...(options.body instanceof FormData ? {} : {'Content-Type':'application/json'}), ...(options.headers||{}) } });
     let data={}; try { data=await response.json(); } catch {}
-    if(!response.ok) { let message=data.error||`Request failed (${response.status})`; if(response.status===405) message='The API endpoint returned 405. Deploy the TAMPslat Worker and set TAMPSLAT_API_BASE to its workers.dev URL in backend-client.js (or route /api to the Worker).'; if(response.status===404) message='The TAMPslat API was not found. Deploy backend/worker.js and configure TAMPSLAT_API_BASE.'; const e=new Error(message); e.status=response.status; throw e; }
+    if(!response.ok) { let message=data.error||`Request failed (${response.status})`; if(response.status===405) message='The TAMPslat API route is not reaching the main Worker. Check the Worker route and static asset configuration.'; if(response.status===404) message='The TAMPslat API route was not found on the main Worker.'; const e=new Error(message); e.status=response.status; throw e; }
     return data;
   }
   window.TAMPSLAT_API = {
     request,
     health:()=>request('/health',{headers:{}}),
     signup:(email,password)=>request('/auth/signup',{method:'POST',body:JSON.stringify({email,password})}),
+    oauthSession:(accessToken)=>request('/auth/oauth-session',{method:'POST',body:JSON.stringify({accessToken})}),
+    emailLinkSession:(accessToken)=>request('/auth/email-link-session',{method:'POST',body:JSON.stringify({accessToken})}),
     recover:(email)=>request('/auth/recover',{method:'POST',body:JSON.stringify({email})}),
     updatePassword:(accessToken,password)=>request('/auth/update-password',{method:'POST',body:JSON.stringify({accessToken,password})}),
     login:(email,password,rememberMe=false)=>request('/auth/login',{method:'POST',body:JSON.stringify({email,password,rememberMe})}),

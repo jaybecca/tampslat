@@ -1,6 +1,6 @@
 # TAMPslat email verification: one-time-code setup
 
-The TAMPslat signup flow now asks users to enter a one-time email code. This avoids a known email-link problem: some mailbox security scanners prefetch confirmation URLs before the recipient opens the message, which can consume a one-time link immediately.
+The preferred TAMPslat signup flow asks users to enter a one-time email code. This avoids a known email-link problem: some mailbox security scanners prefetch confirmation URLs before the recipient opens the message, which can consume a one-time link immediately. The application also accepts a Supabase confirmation link when the project email template is still configured for links.
 
 ## Production redirect URL settings
 
@@ -33,10 +33,37 @@ The OTP expiry setting also governs other email OTP and confirmation flows. Keep
 ## What the application does
 
 - Signup sends the confirmation email through Supabase Auth.
-- The signup page accepts the emailed code.
+- The signup page accepts the emailed code. If Supabase sends a confirmation link instead, the existing `auth-confirmed.html` callback validates it and creates the same secure TAMPslat session.
 - The Worker verifies the code with Supabase Auth, provisions the TAMPslat account, and creates a secure browser session.
 - Users can request a replacement code. The page enforces a 60-second resend cooldown to match Supabase's default signup-confirmation rate limit; the Worker also limits resends to 3 per 15 minutes, and Supabase applies its own email rate limits.
-- Changing OTP expiry to 1800 seconds does not by itself change a confirmation link into a code. The Confirm signup template must use `{{ .Token }}`.
+- Changing OTP expiry to 1800 seconds does not by itself change a confirmation link into a code. The Confirm signup template should use `{{ .Token }}` for the code-first flow. If the template still uses `{{ .ConfirmationURL }}`, the app accepts the link as a fallback.
 - Invalid, expired and already-used codes are rejected.
 
-**Important:** the dashboard email-template change is separate from GitHub deployment. Until the Confirm signup template is changed to use `{{ .Token }}`, Supabase will continue sending its existing confirmation-link email and the code-entry flow will not receive a code.
+**Important:** the dashboard email-template change is separate from GitHub deployment. Use `{{ .Token }}` for the recommended code-first flow. The fallback link handler keeps accounts usable if the template still sends `{{ .ConfirmationURL }}`.
+
+
+## Production SMTP setup for Hostinger Email
+
+Supabase Auth needs an SMTP provider for dependable production delivery. In the Supabase dashboard, open **Authentication → SMTP Settings**, enable custom SMTP, and use the settings for the mailbox you want TAMPslat to send from:
+
+- **SMTP host:** `smtp.hostinger.com`
+- **Port:** `465`
+- **Encryption:** SSL/TLS
+- **Username:** the full Hostinger mailbox address
+- **Password:** that mailbox's email password
+- **Sender email:** the same mailbox address
+- **Sender name:** `TAMPslat`
+
+If port 465 has an encryption/connectivity issue, Hostinger also documents port `587` with TLS/STARTTLS. Confirm the exact settings in Hostinger hPanel under **Emails → Manage → Connect Apps & Devices**. After saving SMTP settings in Supabase, use its test-email function and check the provider's delivery logs before retesting signup.
+
+Never put the mailbox password in GitHub, Worker variables, browser JavaScript, or wrangler.toml.
+
+## Google OAuth provider setup
+
+1. In Supabase, open **Authentication → Sign In / Providers → Google** and enable Google.
+2. Create or select a **Web application** OAuth client in Google Cloud Console.
+3. Add this **Authorized redirect URI** in Google Cloud Console: `https://qqfmsvepxxagszzhhjap.supabase.co/auth/v1/callback`.
+4. Copy the Google **Client ID** and **Client Secret** into the Google provider fields in Supabase. Keep the secret in Supabase only.
+5. In Supabase **Authentication → URL Configuration**, keep the Site URL as `https://tampslat.tampconsulting.space` and allow `https://tampslat.tampconsulting.space/**`. This covers the app's `/auth-confirmed.html` callback.
+
+The Google Cloud redirect URI is the Supabase Auth callback above, not the TAMPslat page URL. The TAMPslat page URL is configured separately in Supabase's redirect allow-list.

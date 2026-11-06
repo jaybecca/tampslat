@@ -247,7 +247,7 @@ async function route(req, env) {
     const currencyMap={NG:'NGN',GB:'GBP',US:'USD',CA:'CAD',AU:'AUD',NZ:'NZD',FR:'EUR',DE:'EUR',ES:'EUR',PT:'EUR',BR:'BRL',JP:'JPY',IN:'INR',AE:'AED',SA:'SAR',ZA:'ZAR'};
     return json({country:country||null,language:languageMap[country]||'en',currency:currencyMap[country]||'USD',source:country?'cloudflare-edge-country':'browser-default'},200,{'Cache-Control':'private, max-age=300','Vary':'CF-IPCountry'});
   }
-  if(path==='/api/health'&&req.method==='GET')return json({ok:true,service:'tampslat-api',time:new Date().toISOString(),features:{auth:true,ai:Boolean(env.OPENAI_API_KEY),ocr:true,database:Boolean(env.DB)}});
+  if(path==='/api/health'&&req.method==='GET')return json({ok:true,service:'tampslat',time:new Date().toISOString(),features:{auth:true,ai:Boolean(env.OPENAI_API_KEY),ocr:true,database:Boolean(env.DB)}});
   if(!env.DB)return fail('Service is temporarily unavailable. Please try again later or contact Support.',503);
   if(path==='/api/webhooks/flutterwave'&&req.method==='POST')return handleBilling(req,env,null,path);if(path==='/api/webhooks/paddle'&&req.method==='POST')return handleBilling(req,env,null,path);
 
@@ -259,14 +259,22 @@ async function route(req, env) {
     if(password.length<10||password.length>128)return fail('Use a password between 10 and 128 characters.');
     const auth=await supabaseRequest(env,`/auth/v1/signup?redirect_to=${encodeURIComponent(authRedirect(req,env,'/auth-confirmed.html'))}`,{method:'POST',body:JSON.stringify({email,password})});
     if(!auth)return fail('Authentication is temporarily unavailable. Please try again later or contact Support.',503);
+    const signupNotice='If this is a new account, check your inbox for a one-time code or confirmation link. If you already have a TAMPslat account, no new signup email is sent; sign in or use Forgot password.';
     if(!auth.response.ok) {
       const message=String(auth.data?.msg||auth.data?.message||'');
       if(auth.response.status===429)return fail('Too many account attempts. Please try again later.',429);
-      if(auth.response.status===422 || /already registered|already exists/i.test(message))return fail('An account may already exist for this email. Try signing in.',409);
+      if(auth.response.status===422 || /already registered|already exists/i.test(message))return json({ok:true,confirmationRequired:true,message:signupNotice},201);
       console.error('TAMPslat Supabase signup rejected',{status:auth.response.status,code:String(auth.data?.code||auth.data?.error_code||'')});
       return fail('We could not create your account. Check the details and try again.',400);
     }
-    return json({ok:true,message:'Your account request has been received. Check your inbox for the six-digit email verification code.'},201);
+    const createdUser=auth.data?.user;
+    if(Array.isArray(createdUser?.identities)&&createdUser.identities.length===0)return json({ok:true,confirmationRequired:true,message:signupNotice},201);
+    if(auth.data?.session&&createdUser&&(createdUser.email_confirmed_at||createdUser.confirmed_at)){
+      let user;try{user=await provisionSupabaseUser(env,createdUser);}catch(e){console.error('TAMPslat immediate signup provisioning failed',{name:e?.name||'Error',reason:e?.message||'unknown'});return fail('Your account was created, but workspace setup did not finish. Please sign in or contact Support.',500);}
+      let token;try{token=await newSession(env,user.id,false);}catch(e){console.error('TAMPslat signup session creation failed',{name:e?.name||'Error',reason:e?.message||'unknown'});return fail('Your account was created, but we could not start your session. Please sign in.',503);}
+      return json({ok:true,sessionCreated:true,user:safeUser(user)},201,{'Set-Cookie':sessionCookie(token,null)});
+    }
+    return json({ok:true,confirmationRequired:true,message:signupNotice+' Use the code here, or open the link to verify your email.'},201);
   }
   if(path==='/api/auth/verify-email'&&req.method==='POST'){
     if(!await rateLimit(env,`verify-email:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many verification attempts. Wait a little and request a new code.',429);
@@ -294,7 +302,48 @@ async function route(req, env) {
     const auth=await supabaseRequest(env,'/auth/v1/resend',{method:'POST',body:JSON.stringify({type:'signup',email})});
     if(!auth)return fail('Authentication is temporarily unavailable. Please try again later or contact Support.',503);
     if(!auth.response.ok){if(auth.response.status===429)return fail('Please wait before requesting another verification email.',429);return fail('We could not resend the verification email. Check the address and try again.',502);}
-    return json({ok:true,message:'If this account is awaiting verification, a new code has been sent. Check your inbox.'});
+    return json({ok:true,message:'If this account is awaiting confirmation, a new verification email has been requested. Use the code or link in the message, and check your spam folder.'});
+  }
+  if(path==='/api/auth/email-link-session'&&req.method==='POST'){
+    if(!await rateLimit(env,`email-link-session:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many verification attempts. Try again later.',429);
+    const d=await bodyJson(req,12000);if(!d)return fail('Invalid email confirmation response.');
+    const accessToken=String(d.accessToken||'');
+    if(accessToken.length<40||accessToken.length>10000)return fail('Your confirmation link is invalid or expired. Request a new verification email.',401);
+    const auth=await supabaseRequest(env,'/auth/v1/user',{method:'GET',headers:{Authorization:`Bearer ${accessToken}`}});
+    if(!auth)return fail('Authentication is temporarily unavailable. Please try again later.',503);
+    if(!auth.response.ok||!auth.data?.id)return fail('Your confirmation link is invalid or expired. Request a new verification email.',401);
+    const authUser=auth.data;
+    if(!authUser.email||!(authUser.email_confirmed_at||authUser.confirmed_at))return fail('Your email has not been confirmed. Open the latest confirmation email and try again.',401);
+    let user;
+    try{user=await provisionSupabaseUser(env,authUser);}catch(e){
+      console.error('TAMPslat email-link identity provisioning failed',{name:e?.name||'Error',reason:e?.message||'unknown'});
+      if(e?.message==='account_link_conflict')return fail('This email is already linked to another TAMPslat account. Sign in with your existing method or contact Support.',409);
+      return fail('Your email is confirmed, but workspace setup did not finish. Please sign in or contact Support.',500);
+    }
+    let token;try{token=await newSession(env,user.id,false);}catch(e){console.error('TAMPslat email-link session creation failed',{name:e?.name||'Error',reason:e?.message||'unknown'});return fail('Your email is confirmed, but we could not start your workspace session. Please sign in.',503);}
+    return json({user:safeUser(user),message:'Email confirmed. Your TAMPslat workspace is ready.'},200,{'Set-Cookie':sessionCookie(token,null)});
+  }
+  if(path==='/api/auth/oauth-session'&&req.method==='POST'){
+    if(!await rateLimit(env,`oauth-session:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many sign-in attempts. Try again later.',429);
+    const d=await bodyJson(req,12000);if(!d)return fail('Invalid sign-in response.');
+    const accessToken=String(d.accessToken||'');
+    if(accessToken.length<40||accessToken.length>10000)return fail('Your Google sign-in session is invalid. Please try again.',401);
+    const auth=await supabaseRequest(env,'/auth/v1/user',{method:'GET',headers:{Authorization:`Bearer ${accessToken}`}});
+    if(!auth)return fail('Authentication is temporarily unavailable. Please try again later.',503);
+    if(!auth.response.ok||!auth.data?.id)return fail('Google could not verify your sign-in. Please try again.',401);
+    const authUser=auth.data;
+    const provider=String(authUser.app_metadata?.provider||'');
+    const identities=Array.isArray(authUser.identities)?authUser.identities:[];
+    if(provider!=='google'&&!identities.some(identity=>identity?.provider==='google'))return fail('This sign-in was not completed with Google.',403);
+    if(!authUser.email||!(authUser.email_confirmed_at||authUser.confirmed_at))return fail('Google did not return a verified email address. Please use email sign-in.',403);
+    let user;
+    try{user=await provisionSupabaseUser(env,authUser);}catch(e){
+      console.error('TAMPslat Google identity provisioning failed',{name:e?.name||'Error',reason:e?.message||'unknown'});
+      if(e?.message==='account_link_conflict')return fail('This email is already linked to another TAMPslat account. Sign in with your existing method or contact Support.',409);
+      return fail('Google verified your identity, but workspace setup did not finish. Please try again.',500);
+    }
+    let token;try{token=await newSession(env,user.id,false);}catch(e){console.error('TAMPslat Google session creation failed',{name:e?.name||'Error',reason:e?.message||'unknown'});return fail('Google verified your identity, but we could not start your workspace session. Please try again.',503);}
+    return json({user:safeUser(user),message:'Google sign-in successful.'},200,{'Set-Cookie':sessionCookie(token,null)});
   }
   if(path==='/api/auth/login'&&req.method==='POST'){
     if(!await rateLimit(env,`login:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many sign-in attempts. Try again later.',429);
@@ -306,7 +355,7 @@ async function route(req, env) {
     if(!auth.response.ok) {
       const message=String(auth.data?.msg||auth.data?.message||'');
       const code=String(auth.data?.code||auth.data?.error_code||'');
-      if(code==='email_not_confirmed' || /email not confirmed|email_not_confirmed/i.test(message))return fail('Please verify your email using the one-time code we sent before signing in.',403);
+      if(code==='email_not_confirmed' || /email not confirmed|email_not_confirmed/i.test(message))return fail('Please verify your email using the confirmation link sent to your inbox before signing in.',403);
       if(auth.response.status===429)return fail('Too many sign-in attempts. Please try again later.',429);
       return fail('Email or password is incorrect.',401);
     }
@@ -319,7 +368,8 @@ async function route(req, env) {
       if(e?.message==='account_link_conflict')return fail('This email is linked to an existing application account. Contact support to complete account linking.',409);
       return fail('Your identity was verified, but we could not finish setting up your workspace. Please try again.',500);
     }
-    const rememberMe=d.rememberMe===true,token=await newSession(env,user.id,rememberMe);
+    const rememberMe=d.rememberMe===true;let token;
+    try{token=await newSession(env,user.id,rememberMe);}catch(e){console.error('TAMPslat password session creation failed',{name:e?.name||'Error',reason:e?.message||'unknown'});return fail('Your password was accepted, but we could not start your workspace session. Please try again.',503);}
     return json({user:safeUser(user)},200,{'Set-Cookie':sessionCookie(token,rememberMe?sessionLifetime(true):null)});
   }
   if(path==='/api/auth/recover'&&req.method==='POST'){
@@ -382,4 +432,37 @@ async function route(req, env) {
   if(path==='/api/billing/summary'&&req.method==='GET'){const ledger=await env.DB.prepare('SELECT amount,event_type,description,created_at FROM credit_ledger WHERE user_id=? ORDER BY created_at DESC LIMIT 50').bind(user.id).all();const latest=await env.DB.prepare('SELECT provider,kind,plan,status,created_at,paid_at FROM billing_orders WHERE user_id=? ORDER BY created_at DESC LIMIT 1').bind(user.id).first();const paymentMode=String(env.PAYMENT_MODE||'sandbox').toLowerCase(),paymentsEnabled=paymentMode==='live'?env.ALLOW_LIVE_PAYMENTS==='true'&&Boolean(env.flutterwave_secret_key||env.paddle_api_key):Boolean(env.flutterwave_secret_key_sandbox||env.paddle_api_key_sandbox);return json({plan:user.plan,planExpiresAt:user.plan_expires_at||null,billingProvider:user.billing_provider||null,credits:user.credits_balance,usage:await usageSnapshot(env,user),ledger:ledger.results||[],latestOrder:latest||null,paymentsEnabled,paymentMode});}
   return fail('Endpoint not found.',404);
 }
-export default { async fetch(req,env) { try { const res=await route(req,env); const headers=new Headers(res.headers); for(const [k,v] of Object.entries(corsHeaders(req,env)))headers.set(k,v); headers.set('X-Content-Type-Options','nosniff');headers.set('Referrer-Policy','strict-origin-when-cross-origin');headers.set('X-Frame-Options','DENY');return new Response(res.body,{status:res.status,statusText:res.statusText,headers}); } catch(e) { const url=new URL(req.url); console.error('TAMPslat request failed', {method:req.method,path:url.pathname,name:e?.name,message:e?.message,stack:e?.stack}); return json({error:'Unexpected server error.'},500); } } };
+function secureResponse(response) {
+  const headers=new Headers(response.headers);
+  headers.set('X-Content-Type-Options','nosniff');
+  headers.set('Referrer-Policy','strict-origin-when-cross-origin');
+  headers.set('X-Frame-Options','DENY');
+  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+}
+async function serveStatic(req,env) {
+  const asset=await env.ASSETS.fetch(req);
+  const contentType=asset.headers.get('content-type')||'';
+  if(req.method!=='GET'||!asset.ok||!contentType.includes('text/html'))return secureResponse(asset);
+  const html=await asset.text();
+  if(html.includes('/promo-banner.js'))return secureResponse(new Response(html,{status:asset.status,statusText:asset.statusText,headers:asset.headers}));
+  const script='<script src="/promo-banner.js" defer></script>';
+  const close=html.toLowerCase().lastIndexOf('</body>');
+  const output=close>=0?html.slice(0,close)+script+html.slice(close):html+script;
+  const headers=new Headers(asset.headers);
+  headers.delete('content-length');headers.delete('content-encoding');headers.delete('etag');
+  return secureResponse(new Response(output,{status:asset.status,statusText:asset.statusText,headers}));
+}
+export default { async fetch(req,env) {
+  try {
+    const url=new URL(req.url);
+    if(!url.pathname.startsWith('/api/'))return await serveStatic(req,env);
+    const res=await route(req,env);
+    const headers=new Headers(res.headers);
+    for(const [k,v] of Object.entries(corsHeaders(req,env)))headers.set(k,v);
+    return secureResponse(new Response(res.body,{status:res.status,statusText:res.statusText,headers}));
+  } catch(e) {
+    const url=new URL(req.url);
+    console.error('TAMPslat request failed',{method:req.method,path:url.pathname,name:e?.name,message:e?.message,stack:e?.stack});
+    return json({error:'Unexpected server error.'},500);
+  }
+} };

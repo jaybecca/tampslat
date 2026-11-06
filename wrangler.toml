@@ -30,7 +30,7 @@ bucket_name = "tampslat-files"
 
 [assets]
 directory = "."
-run_worker_first = ["/api/*"]
+run_worker_first = ["/*"]
 
 # Worker Previews use isolated resources. Never point these at production.
 [previews.vars]

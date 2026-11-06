@@ -118,8 +118,8 @@ The signup response sets an HttpOnly session cookie. Use a cookie-aware browser 
 
 ## Production blockers / important limitations
 
-- **Email verification and password reset are not implemented yet.** Add a transactional email provider and expiring one-time tokens before public launch. The current recovery/change-password pages remain UI only.
-- **Google OAuth is not implemented yet.** Remove or label the Google buttons until OAuth credentials and callback/session validation are configured.
+- **Email delivery still requires production SMTP.** Email verification, password recovery and password changes use Supabase Auth; configure and test custom SMTP before public launch.
+- **Google OAuth requires Supabase provider configuration.** Enable Google in Supabase Auth and store the Google Web Client ID and secret in the Supabase provider settings; follow `docs/email-verification-otp.md` for the exact callback and redirect allow-list.
 - **Payments are sandbox-ready but not live-approved.** Flutterwave/Paddle checkout creation, server-side verification, signed webhooks and idempotent plan/credit grants are implemented. The migration and sandbox credentials/webhook destinations still need to be configured and tested. Flutterwave plans currently renew manually for 30-day access; Paddle plans use recurring monthly billing. Refund automation, provider-side subscription cancellation controls and full billing lifecycle QA remain open. Never grant value based on a browser redirect.
 - **Admin role provisioning is not included.** Do not expose `admin.html` as a real admin console; its current values are demo data.
 - **Data at rest:** D1 is account-scoped, but user work content currently has no application-level encryption. Do not store highly sensitive client, identity, medical, financial-account or confidential business documents until retention, deletion, backup and encryption policies are decided.
@@ -147,5 +147,5 @@ curl -i -b cookies.txt -X POST http://127.0.0.1:8787/api/tools/csv/analyze \
 ```
 
 
-## Connect the frontend to the API
-If the static website and Worker are hosted separately, set `window.TAMPSLAT_API_BASE` to the deployed Worker origin before `backend-client.js` loads, for example `https://tampslat-api.<your-subdomain>.workers.dev`. Do not include `/api` at the end. A 405 from a static hosting origin means the request reached the website host rather than the API Worker. Configure the real Worker URL after deployment; do not put secrets in frontend code.
+## Single-Worker website and API routing
+The main `tampslat` Worker serves the website assets and every `/api/*` endpoint on the same origin. `backend-client.js` uses relative `/api` requests. Do not set `TAMPSLAT_API_BASE` and do not deploy a separate `tampslat-api` Worker. Keep the `[assets]` binding enabled and `run_worker_first = ["/*"]` so the main Worker can apply security headers and append the configurable product showcase to HTML pages.
