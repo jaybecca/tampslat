@@ -247,7 +247,7 @@ async function route(req, env) {
     const currencyMap={NG:'NGN',GB:'GBP',US:'USD',CA:'CAD',AU:'AUD',NZ:'NZD',FR:'EUR',DE:'EUR',ES:'EUR',PT:'EUR',BR:'BRL',JP:'JPY',IN:'INR',AE:'AED',SA:'SAR',ZA:'ZAR'};
     return json({country:country||null,language:languageMap[country]||'en',currency:currencyMap[country]||'USD',source:country?'cloudflare-edge-country':'browser-default'},200,{'Cache-Control':'private, max-age=300','Vary':'CF-IPCountry'});
   }
-  if(path==='/api/health'&&req.method==='GET')return json({ok:true,service:'tampslat-api',time:new Date().toISOString(),features:{auth:true,ai:Boolean(env.OPENAI_API_KEY),ocr:true,database:Boolean(env.DB)}});
+  if(path==='/api/health'&&req.method==='GET')return json({ok:true,service:'tampslat',time:new Date().toISOString(),features:{auth:true,ai:Boolean(env.OPENAI_API_KEY),ocr:true,database:Boolean(env.DB)}});
   if(!env.DB)return fail('Service is temporarily unavailable. Please try again later or contact Support.',503);
   if(path==='/api/webhooks/flutterwave'&&req.method==='POST')return handleBilling(req,env,null,path);if(path==='/api/webhooks/paddle'&&req.method==='POST')return handleBilling(req,env,null,path);
 
@@ -432,4 +432,37 @@ async function route(req, env) {
   if(path==='/api/billing/summary'&&req.method==='GET'){const ledger=await env.DB.prepare('SELECT amount,event_type,description,created_at FROM credit_ledger WHERE user_id=? ORDER BY created_at DESC LIMIT 50').bind(user.id).all();const latest=await env.DB.prepare('SELECT provider,kind,plan,status,created_at,paid_at FROM billing_orders WHERE user_id=? ORDER BY created_at DESC LIMIT 1').bind(user.id).first();const paymentMode=String(env.PAYMENT_MODE||'sandbox').toLowerCase(),paymentsEnabled=paymentMode==='live'?env.ALLOW_LIVE_PAYMENTS==='true'&&Boolean(env.flutterwave_secret_key||env.paddle_api_key):Boolean(env.flutterwave_secret_key_sandbox||env.paddle_api_key_sandbox);return json({plan:user.plan,planExpiresAt:user.plan_expires_at||null,billingProvider:user.billing_provider||null,credits:user.credits_balance,usage:await usageSnapshot(env,user),ledger:ledger.results||[],latestOrder:latest||null,paymentsEnabled,paymentMode});}
   return fail('Endpoint not found.',404);
 }
-export default { async fetch(req,env) { try { const res=await route(req,env); const headers=new Headers(res.headers); for(const [k,v] of Object.entries(corsHeaders(req,env)))headers.set(k,v); headers.set('X-Content-Type-Options','nosniff');headers.set('Referrer-Policy','strict-origin-when-cross-origin');headers.set('X-Frame-Options','DENY');return new Response(res.body,{status:res.status,statusText:res.statusText,headers}); } catch(e) { const url=new URL(req.url); console.error('TAMPslat request failed', {method:req.method,path:url.pathname,name:e?.name,message:e?.message,stack:e?.stack}); return json({error:'Unexpected server error.'},500); } } };
+function secureResponse(response) {
+  const headers=new Headers(response.headers);
+  headers.set('X-Content-Type-Options','nosniff');
+  headers.set('Referrer-Policy','strict-origin-when-cross-origin');
+  headers.set('X-Frame-Options','DENY');
+  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+}
+async function serveStatic(req,env) {
+  const asset=await env.ASSETS.fetch(req);
+  const contentType=asset.headers.get('content-type')||'';
+  if(req.method!=='GET'||!asset.ok||!contentType.includes('text/html'))return secureResponse(asset);
+  const html=await asset.text();
+  if(html.includes('/promo-banner.js'))return secureResponse(new Response(html,{status:asset.status,statusText:asset.statusText,headers:asset.headers}));
+  const script='<script src="/promo-banner.js" defer></script>';
+  const close=html.toLowerCase().lastIndexOf('</body>');
+  const output=close>=0?html.slice(0,close)+script+html.slice(close):html+script;
+  const headers=new Headers(asset.headers);
+  headers.delete('content-length');headers.delete('content-encoding');headers.delete('etag');
+  return secureResponse(new Response(output,{status:asset.status,statusText:asset.statusText,headers}));
+}
+export default { async fetch(req,env) {
+  try {
+    const url=new URL(req.url);
+    if(!url.pathname.startsWith('/api/'))return await serveStatic(req,env);
+    const res=await route(req,env);
+    const headers=new Headers(res.headers);
+    for(const [k,v] of Object.entries(corsHeaders(req,env)))headers.set(k,v);
+    return secureResponse(new Response(res.body,{status:res.status,statusText:res.statusText,headers}));
+  } catch(e) {
+    const url=new URL(req.url);
+    console.error('TAMPslat request failed',{method:req.method,path:url.pathname,name:e?.name,message:e?.message,stack:e?.stack});
+    return json({error:'Unexpected server error.'},500);
+  }
+} };

@@ -35,6 +35,7 @@ jobs:
           node --check auth-language.js
           node --check auth-google.js
           node --check auth-confirmed.js
+          node --check promo-banner.js
           node --check engines/ai-refinement-client.js
           node --check engines/studio-design-engine.js
           node --check engines/document-preview.js
@@ -67,6 +68,21 @@ jobs:
               new vm.Script(match[2], { filename: file + ' inline script ' + (++number) });
             }
           }
+          NODE
+
+
+      - name: Validate single-Worker routing and promotional strip
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const worker = fs.readFileSync('backend/worker.js', 'utf8');
+          const wrangler = fs.readFileSync('wrangler.toml', 'utf8');
+          const client = fs.readFileSync('backend-client.js', 'utf8');
+          const promo = fs.readFileSync('promo-banner.js', 'utf8');
+          if (!wrangler.includes("name = 'tampslat'") || !wrangler.includes('run_worker_first = ["/*"]')) throw new Error('All site and API requests must pass through the main tampslat Worker');
+          if (!worker.includes('env.ASSETS.fetch(req)') || !worker.includes('/promo-banner.js')) throw new Error('Main Worker must serve static assets and inject the promo strip');
+          if (client.includes('tampslat-api')) throw new Error('Frontend must not depend on the retired API Worker');
+          for (const url of ['https://tampops.tampconsulting.space','https://education.tampconsulting.space','https://www.tampconsulting.space']) if (!promo.includes(url)) throw new Error('Missing configured TAMP product promotion: ' + url);
           NODE
 
       - name: Validate D1 migration chain
