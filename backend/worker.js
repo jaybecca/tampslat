@@ -273,7 +273,7 @@ async function route(req, env) {
       let token;try{token=await newSession(env,user.id,false);}catch(e){console.error('TAMPslat signup session creation failed',{name:e?.name||'Error',reason:e?.message||'unknown'});return fail('Your account was created, but we could not start your session. Please sign in.',503);}
       return json({ok:true,sessionCreated:true,user:safeUser(user)},201,{'Set-Cookie':sessionCookie(token,null)});
     }
-    return json({ok:true,confirmationRequired:true,message:'Your account was created. Check your inbox for the confirmation link, then return here to sign in.'},201);
+    return json({ok:true,confirmationRequired:true,message:'Your account was created. Check your inbox for the one-time code or confirmation link. Use the code here, or open the link to verify your email.'},201);
   }
   if(path==='/api/auth/verify-email'&&req.method==='POST'){
     if(!await rateLimit(env,`verify-email:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many verification attempts. Wait a little and request a new code.',429);
@@ -301,7 +301,26 @@ async function route(req, env) {
     const auth=await supabaseRequest(env,'/auth/v1/resend',{method:'POST',body:JSON.stringify({type:'signup',email})});
     if(!auth)return fail('Authentication is temporarily unavailable. Please try again later or contact Support.',503);
     if(!auth.response.ok){if(auth.response.status===429)return fail('Please wait before requesting another verification email.',429);return fail('We could not resend the verification email. Check the address and try again.',502);}
-    return json({ok:true,message:'If this account is awaiting confirmation, a new confirmation email has been requested. Check your inbox and spam folder.'});
+    return json({ok:true,message:'If this account is awaiting confirmation, a new verification email has been requested. Use the code or link in the message, and check your spam folder.'});
+  }
+  if(path==='/api/auth/email-link-session'&&req.method==='POST'){
+    if(!await rateLimit(env,`email-link-session:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many verification attempts. Try again later.',429);
+    const d=await bodyJson(req,12000);if(!d)return fail('Invalid email confirmation response.');
+    const accessToken=String(d.accessToken||'');
+    if(accessToken.length<40||accessToken.length>10000)return fail('Your confirmation link is invalid or expired. Request a new verification email.',401);
+    const auth=await supabaseRequest(env,'/auth/v1/user',{method:'GET',headers:{Authorization:`Bearer ${accessToken}`}});
+    if(!auth)return fail('Authentication is temporarily unavailable. Please try again later.',503);
+    if(!auth.response.ok||!auth.data?.id)return fail('Your confirmation link is invalid or expired. Request a new verification email.',401);
+    const authUser=auth.data;
+    if(!authUser.email||!(authUser.email_confirmed_at||authUser.confirmed_at))return fail('Your email has not been confirmed. Open the latest confirmation email and try again.',401);
+    let user;
+    try{user=await provisionSupabaseUser(env,authUser);}catch(e){
+      console.error('TAMPslat email-link identity provisioning failed',{name:e?.name||'Error',reason:e?.message||'unknown'});
+      if(e?.message==='account_link_conflict')return fail('This email is already linked to another TAMPslat account. Sign in with your existing method or contact Support.',409);
+      return fail('Your email is confirmed, but workspace setup did not finish. Please sign in or contact Support.',500);
+    }
+    let token;try{token=await newSession(env,user.id,false);}catch(e){console.error('TAMPslat email-link session creation failed',{name:e?.name||'Error',reason:e?.message||'unknown'});return fail('Your email is confirmed, but we could not start your workspace session. Please sign in.',503);}
+    return json({user:safeUser(user),message:'Email confirmed. Your TAMPslat workspace is ready.'},200,{'Set-Cookie':sessionCookie(token,null)});
   }
   if(path==='/api/auth/oauth-session'&&req.method==='POST'){
     if(!await rateLimit(env,`oauth-session:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many sign-in attempts. Try again later.',429);
