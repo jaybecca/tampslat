@@ -38,6 +38,7 @@ jobs:
           node --check engines/document-preview.js
           node --check app.js
           node --check landing.js
+          node --check plans-data.js
 
       - name: Validate inline scripts in key UI pages
         run: |
