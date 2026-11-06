@@ -34,6 +34,7 @@ const PLAN_LIMITS = Object.freeze({
   pro: { saved_work: 500, csv_analysis: 500 },
   business: { saved_work: 2000, csv_analysis: 2000 }
 });
+const PLAN_TOOL_LIMITS = Object.freeze({ free: 5, starter: 50, pro: 250, business: 1000 });
 const usagePeriod = () => new Date().toISOString().slice(0,7);
 async function reserveUsage(env,user,feature) {
   const period=usagePeriod(),limit=PLAN_LIMITS[user.plan]?.[feature]??PLAN_LIMITS.free[feature];
@@ -67,7 +68,7 @@ async function usageSnapshot(env,user) {
   for(const row of results[0].results||[])if(Object.prototype.hasOwnProperty.call(usage,row.feature))usage[row.feature]=Number(row.used)||0;
   const toolUsage={};for(const row of results[2].results||[])toolUsage[row.tool_key]=Number(row.used)||0;
   const ai=results[1]||{};
-  return {plan:user.plan,period,periodTimezone:'UTC',limits,usage,toolUsage,toolUseLimit:user.plan==='free'?5:null,toolUseLimitLabel:user.plan==='free'?'5 per tool per calendar month':'No per-tool monthly cap',ai:{requests:Number(ai.requests)||0,creditsSpent:Number(ai.credits_spent)||0},credits:Number(user.credits_balance)||0};
+  return {plan:user.plan,period,periodTimezone:'UTC',limits,usage,toolUsage,toolUseLimit:PLAN_TOOL_LIMITS[user.plan]??PLAN_TOOL_LIMITS.free,toolUseLimitLabel:`${PLAN_TOOL_LIMITS[user.plan]??PLAN_TOOL_LIMITS.free} completed operations per studio per calendar month`,ai:{requests:Number(ai.requests)||0,creditsSpent:Number(ai.credits_spent)||0},credits:Number(user.credits_balance)||0};
 }
 async function reserveToolUsage(req,env,user) {
   const data=await bodyJson(req,3000);if(!data)return fail('Invalid tool-use request.');
@@ -75,9 +76,9 @@ async function reserveToolUsage(req,env,user) {
   if(!TOOL_KEYS.has(toolKey))return fail('Unknown tool.',400);
   const period=usagePeriod();
   await releaseStaleToolReservations(env,user,period);
-  const limit=user.plan==='free'?5:2147483647;
+  const limit=PLAN_TOOL_LIMITS[user.plan]??PLAN_TOOL_LIMITS.free;
   const row=await env.DB.prepare('INSERT INTO tool_usage_counters(user_id,period_key,tool_key,used) VALUES(?,?,?,1) ON CONFLICT(user_id,period_key,tool_key) DO UPDATE SET used=used+1,updated_at=CURRENT_TIMESTAMP WHERE used < ? RETURNING used').bind(user.id,period,toolKey,limit).first();
-  if(!row)return fail('You have used all 5 free operations for this tool this month. Your allowance resets on the first day of next month (UTC).',429);
+  if(!row)return fail(`You have used all ${limit} operations included for this studio this month on your ${user.plan} plan. Your allowance resets on the first day of next month (UTC).`,429);
   const reservationId=uid();
   try {
     await env.DB.prepare("INSERT INTO tool_usage_reservations(id,user_id,period_key,tool_key,status) VALUES(?,?,?,?,'pending')").bind(reservationId,user.id,period,toolKey).run();
@@ -85,7 +86,7 @@ async function reserveToolUsage(req,env,user) {
     await env.DB.prepare('UPDATE tool_usage_counters SET used=MAX(0,used-1),updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND period_key=? AND tool_key=?').bind(user.id,period,toolKey).run();
     throw error;
   }
-  return json({reservationId,toolKey,period,used:Number(row.used),limit:user.plan==='free'?5:null});
+  return json({reservationId,toolKey,period,used:Number(row.used),limit});
 }
 async function completeToolUsage(req,env,user) {
   const data=await bodyJson(req,3000);if(!data)return fail('Invalid completion request.');
