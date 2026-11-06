@@ -133,6 +133,21 @@ jobs:
               if (!allowed.has(match[1])) throw new Error(file + ': unknown metered tool ' + match[1]);
             }
           }
+          const worker = fs.readFileSync('backend/worker.js', 'utf8');
+          const fileStudio = fs.readFileSync('file-studio.html', 'utf8');
+          const presentation = fs.readFileSync('presentation-studio.html', 'utf8');
+          const aiStudio = fs.readFileSync('ai-studio.html', 'utf8');
+          const converterPage = fs.readFileSync('document-converter.html', 'utf8');
+          const converterService = fs.readFileSync('services/document-converter/server.js', 'utf8');
+          const converterDocker = fs.readFileSync('services/document-converter/Dockerfile', 'utf8');
+          if (!worker.includes('env.admin_email') || !worker.includes('syncAdminRole')) throw new Error('Admin roles must be derived from the Cloudflare admin_email allowlist');
+          if (!fileStudio.includes('id="editSheet"') || !fileStudio.includes('id="editOutline"') || !fileStudio.includes('id="pdfEdit"') || !fileStudio.includes('id="pdfProtect"')) throw new Error('File Studio must expose spreadsheet, presentation and PDF editing controls');
+          if (!fileStudio.includes('FBXLoader') || !fileStudio.includes("ext==='gltf'")) throw new Error('3D File Studio must support GLTF and FBX imports');
+          if (!presentation.includes('id="importPptx"') || !presentation.includes('id="editSelected"')) throw new Error('Presentation Studio must import and edit PPTX slide text');
+          if (!aiStudio.includes('id="sourceFile"') || !aiStudio.includes('imageDataUrl')) throw new Error('AI Studio must accept file and image inputs');
+          if (converterPage.includes('Docker source folder') && converterPage.includes('not included')) throw new Error('Document Converter must not falsely report that its checked-in Docker source is missing');
+          if (!converterService.includes('/api/pdf/protect') || !converterService.includes("'qpdf'") && !converterService.includes("run('qpdf'")) throw new Error('Document converter must expose the qpdf PDF encryption backend');
+          if (!converterDocker.includes('qpdf') || !fs.existsSync('services/document-converter/Dockerfile')) throw new Error('Document converter Docker image must include qpdf');
           NODE
 
       - name: Validate display currencies, regional checkout and email OTP
