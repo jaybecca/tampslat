@@ -7,7 +7,7 @@ const uid = () => crypto.randomUUID();
 const b64url = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 async function sha256(text) { return b64url(await crypto.subtle.digest('SHA-256', encoder.encode(text))); }
 function cookie(req, name) { const header=req.headers.get('Cookie')||''; const found=header.split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'=')); return found ? decodeURIComponent(found.slice(name.length+1)) : ''; }
-function sessionCookie(token, maxAge) { return `tampslat_session=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`; }
+function sessionCookie(token, maxAge) { return `tampslat_session=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax${Number.isFinite(maxAge)?`; Max-Age=${maxAge}`:''}`; }
 function clearCookie() { return 'tampslat_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0'; }
 function allowedOrigin(req, env) {
   const origin=req.headers.get('Origin');
@@ -46,16 +46,64 @@ async function releaseUsage(env,user,feature,period) {
 async function recordUsage(env,user,feature,period,metadata={}) {
   await env.DB.prepare('INSERT INTO usage_events(id,user_id,period_key,feature,metadata_json) VALUES(?,?,?,?,?)').bind(uid(),user.id,period,feature,JSON.stringify(metadata)).run();
 }
+const TOOL_KEYS = new Set(['document-studio','business-operations-studio','template-library','document-converter','pdf-studio','zip-studio','file-studio','vault-studio','spreadsheet-studio','batch-studio','design-studio','presentation-studio','font-studio','3d-web-studio','ebook-studio','ai-studio']);
+async function releaseStaleToolReservations(env,user,period) {
+  // A closed tab or lost network response must not permanently consume a use.
+  // Pending reservations older than two hours are treated as abandoned.
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE tool_usage_counters SET used=MAX(0,used-(SELECT COUNT(*) FROM tool_usage_reservations r WHERE r.user_id=? AND r.period_key=? AND r.tool_key=tool_usage_counters.tool_key AND r.status='pending' AND r.created_at < datetime('now','-2 hours'))),updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND period_key=? AND EXISTS(SELECT 1 FROM tool_usage_reservations r WHERE r.user_id=? AND r.period_key=? AND r.tool_key=tool_usage_counters.tool_key AND r.status='pending' AND r.created_at < datetime('now','-2 hours'))`).bind(user.id,period,user.id,period,user.id,period),
+    env.DB.prepare(`UPDATE tool_usage_reservations SET status='released' WHERE user_id=? AND period_key=? AND status='pending' AND created_at < datetime('now','-2 hours')`).bind(user.id,period)
+  ]);
+}
 async function usageSnapshot(env,user) {
   const period=usagePeriod(),limits=PLAN_LIMITS[user.plan]||PLAN_LIMITS.free;
+  await releaseStaleToolReservations(env,user,period);
   const results=await Promise.all([
     env.DB.prepare('SELECT feature,used FROM usage_counters WHERE user_id=? AND period_key=?').bind(user.id,period).all(),
-    env.DB.prepare("SELECT COUNT(*) AS requests,COALESCE(SUM(-amount),0) AS credits_spent FROM credit_ledger WHERE user_id=? AND event_type IN ('ai_usage','ai_refinement') AND substr(created_at,1,7)=?").bind(user.id,period).first()
+    env.DB.prepare("SELECT COUNT(*) AS requests,COALESCE(SUM(-amount),0) AS credits_spent FROM credit_ledger WHERE user_id=? AND event_type IN ('ai_usage','ai_refinement') AND substr(created_at,1,7)=?").bind(user.id,period).first(),
+    env.DB.prepare('SELECT tool_key,used FROM tool_usage_counters WHERE user_id=? AND period_key=?').bind(user.id,period).all()
   ]);
   const usage={saved_work:0,csv_analysis:0};
   for(const row of results[0].results||[])if(Object.prototype.hasOwnProperty.call(usage,row.feature))usage[row.feature]=Number(row.used)||0;
+  const toolUsage={};for(const row of results[2].results||[])toolUsage[row.tool_key]=Number(row.used)||0;
   const ai=results[1]||{};
-  return {plan:user.plan,period,periodTimezone:'UTC',limits,usage,ai:{requests:Number(ai.requests)||0,creditsSpent:Number(ai.credits_spent)||0},credits:Number(user.credits_balance)||0};
+  return {plan:user.plan,period,periodTimezone:'UTC',limits,usage,toolUsage,toolUseLimit:user.plan==='free'?5:null,toolUseLimitLabel:user.plan==='free'?'5 per tool per calendar month':'No per-tool monthly cap',ai:{requests:Number(ai.requests)||0,creditsSpent:Number(ai.credits_spent)||0},credits:Number(user.credits_balance)||0};
+}
+async function reserveToolUsage(req,env,user) {
+  const data=await bodyJson(req,3000);if(!data)return fail('Invalid tool-use request.');
+  const toolKey=String(data.toolKey||'');
+  if(!TOOL_KEYS.has(toolKey))return fail('Unknown tool.',400);
+  const period=usagePeriod();
+  await releaseStaleToolReservations(env,user,period);
+  const limit=user.plan==='free'?5:2147483647;
+  const row=await env.DB.prepare('INSERT INTO tool_usage_counters(user_id,period_key,tool_key,used) VALUES(?,?,?,1) ON CONFLICT(user_id,period_key,tool_key) DO UPDATE SET used=used+1,updated_at=CURRENT_TIMESTAMP WHERE used < ? RETURNING used').bind(user.id,period,toolKey,limit).first();
+  if(!row)return fail('You have used all 5 free operations for this tool this month. Your allowance resets on the first day of next month (UTC).',429);
+  const reservationId=uid();
+  try {
+    await env.DB.prepare("INSERT INTO tool_usage_reservations(id,user_id,period_key,tool_key,status) VALUES(?,?,?,?,'pending')").bind(reservationId,user.id,period,toolKey).run();
+  } catch(error) {
+    await env.DB.prepare('UPDATE tool_usage_counters SET used=MAX(0,used-1),updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND period_key=? AND tool_key=?').bind(user.id,period,toolKey).run();
+    throw error;
+  }
+  return json({reservationId,toolKey,period,used:Number(row.used),limit:user.plan==='free'?5:null});
+}
+async function completeToolUsage(req,env,user) {
+  const data=await bodyJson(req,3000);if(!data)return fail('Invalid completion request.');
+  const idValue=String(data.reservationId||'');
+  if(!/^[0-9a-f-]{36}$/i.test(idValue))return fail('Invalid usage reservation.',400);
+  const result=await env.DB.prepare("UPDATE tool_usage_reservations SET status='completed',completed_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=? AND status='pending'").bind(idValue,user.id).run();
+  if(result.meta?.changes)return json({ok:true});
+  const existing=await env.DB.prepare('SELECT status FROM tool_usage_reservations WHERE id=? AND user_id=?').bind(idValue,user.id).first();
+  return existing?.status==='completed'?json({ok:true}):fail('Usage reservation not found or already released.',404);
+}
+async function releaseToolUsage(req,env,user) {
+  const data=await bodyJson(req,3000);if(!data)return fail('Invalid release request.');
+  const idValue=String(data.reservationId||'');
+  if(!/^[0-9a-f-]{36}$/i.test(idValue))return fail('Invalid usage reservation.',400);
+  const reservation=await env.DB.prepare("UPDATE tool_usage_reservations SET status='released' WHERE id=? AND user_id=? AND status='pending' RETURNING period_key,tool_key").bind(idValue,user.id).first();
+  if(!reservation)return json({ok:true,released:false});
+  await env.DB.prepare('UPDATE tool_usage_counters SET used=MAX(0,used-1),updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND period_key=? AND tool_key=?').bind(user.id,reservation.period_key,reservation.tool_key).run();
+  return json({ok:true,released:true});
 }
 async function currentUser(req, env) {
   const token=cookie(req,'tampslat_session'); if(!token)return null;
@@ -64,8 +112,9 @@ async function currentUser(req, env) {
   if(row?.plan_expires_at&&Date.parse(row.plan_expires_at)<=Date.now()){await env.DB.prepare(`UPDATE users SET plan='free',plan_expires_at=NULL,billing_provider=NULL,billing_subscription_id=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND plan_expires_at IS NOT NULL AND datetime(plan_expires_at)<=datetime('now')`).bind(row.id).run();row.plan='free';row.plan_expires_at=null;}
   return row||null;
 }
-async function newSession(env, userId) {
-  const token=b64url(crypto.getRandomValues(new Uint8Array(32))), hash=await sha256(token), expires=Math.floor(Date.now()/1000)+60*60*24*14;
+function sessionLifetime(rememberMe=false) { return rememberMe?60*60*24*30:60*60*12; }
+async function newSession(env, userId, rememberMe=false) {
+  const token=b64url(crypto.getRandomValues(new Uint8Array(32))), hash=await sha256(token), expires=Math.floor(Date.now()/1000)+sessionLifetime(rememberMe);
   await env.DB.prepare('INSERT INTO sessions(id,user_id,token_hash,expires_at) VALUES(?,?,?,?)').bind(uid(),userId,hash,expires).run();
   return token;
 }
@@ -216,7 +265,35 @@ async function route(req, env) {
       console.error('TAMPslat Supabase signup rejected',{status:auth.response.status,code:String(auth.data?.code||auth.data?.error_code||'')});
       return fail('We could not create your account. Check the details and try again.',400);
     }
-    return json({ok:true,message:'Your account request has been received. Check your inbox and click the verification link before signing in.'},201);
+    return json({ok:true,message:'Your account request has been received. Check your inbox for the six-digit email verification code.'},201);
+  }
+  if(path==='/api/auth/verify-email'&&req.method==='POST'){
+    if(!await rateLimit(env,`verify-email:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many verification attempts. Wait a little and request a new code.',429);
+    const d=await bodyJson(req,5000);if(!d)return fail('Invalid JSON.');
+    const email=String(d.email||'').trim().toLowerCase(),token=String(d.token||'').trim();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!/^[0-9]{6,10}$/.test(token))return fail('Enter your email address and the verification code.');
+    const auth=await supabaseRequest(env,'/auth/v1/verify',{method:'POST',body:JSON.stringify({type:'signup',email,token})});
+    if(!auth)return fail('Authentication is temporarily unavailable. Please try again later or contact Support.',503);
+    if(!auth.response.ok){
+      if(auth.response.status===429)return fail('Too many verification attempts. Please wait before trying again.',429);
+      return fail('That verification code is invalid, already used or expired. Request a new code and try again.',401);
+    }
+    const authUser=auth.data?.user;
+    if(!authUser||!(authUser.email_confirmed_at||authUser.confirmed_at))return fail('Email verification could not be confirmed. Request a new code.',401);
+    let user;
+    try{user=await provisionSupabaseUser(env,authUser);}catch(e){console.error('TAMPslat verified identity provisioning failed',{name:e?.name||'Error',reason:e?.message||'unknown'});return fail('Your email is verified, but workspace setup did not finish. Please sign in or contact Support.',500);}
+    const session=await newSession(env,user.id,false);
+    return json({user:safeUser(user),message:'Email verified. Your workspace is ready.'},200,{'Set-Cookie':sessionCookie(session,null)});
+  }
+  if(path==='/api/auth/resend-verification'&&req.method==='POST'){
+    if(!await rateLimit(env,`resend-verification:${req.headers.get('CF-Connecting-IP')||'unknown'}`,3,900))return fail('Too many resend attempts. Please wait 15 minutes before requesting another verification email.',429);
+    const d=await bodyJson(req,5000);if(!d)return fail('Invalid JSON.');
+    const email=String(d.email||'').trim().toLowerCase();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return fail('Enter a valid email address.');
+    const auth=await supabaseRequest(env,'/auth/v1/resend',{method:'POST',body:JSON.stringify({type:'signup',email})});
+    if(!auth)return fail('Authentication is temporarily unavailable. Please try again later or contact Support.',503);
+    if(!auth.response.ok){if(auth.response.status===429)return fail('Please wait before requesting another verification email.',429);return fail('We could not resend the verification email. Check the address and try again.',502);}
+    return json({ok:true,message:'If this account is awaiting verification, a new code has been sent. Check your inbox.'});
   }
   if(path==='/api/auth/login'&&req.method==='POST'){
     if(!await rateLimit(env,`login:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many sign-in attempts. Try again later.',429);
@@ -228,7 +305,7 @@ async function route(req, env) {
     if(!auth.response.ok) {
       const message=String(auth.data?.msg||auth.data?.message||'');
       const code=String(auth.data?.code||auth.data?.error_code||'');
-      if(code==='email_not_confirmed' || /email not confirmed|email_not_confirmed/i.test(message))return fail('Please verify your email using the link we sent before signing in.',403);
+      if(code==='email_not_confirmed' || /email not confirmed|email_not_confirmed/i.test(message))return fail('Please verify your email using the one-time code we sent before signing in.',403);
       if(auth.response.status===429)return fail('Too many sign-in attempts. Please try again later.',429);
       return fail('Email or password is incorrect.',401);
     }
@@ -241,8 +318,8 @@ async function route(req, env) {
       if(e?.message==='account_link_conflict')return fail('This email is linked to an existing application account. Contact support to complete account linking.',409);
       return fail('Your identity was verified, but we could not finish setting up your workspace. Please try again.',500);
     }
-    const token=await newSession(env,user.id);
-    return json({user:safeUser(user)},200,{'Set-Cookie':sessionCookie(token,60*60*24*14)});
+    const rememberMe=d.rememberMe===true,token=await newSession(env,user.id,rememberMe);
+    return json({user:safeUser(user)},200,{'Set-Cookie':sessionCookie(token,rememberMe?sessionLifetime(true):null)});
   }
   if(path==='/api/auth/recover'&&req.method==='POST'){
     if(!await rateLimit(env,`recover:${req.headers.get('CF-Connecting-IP')||'unknown'}`,5,3600))return fail('Please wait before requesting another password reset.',429);
@@ -285,6 +362,9 @@ async function route(req, env) {
   }
   if(path==='/api/ai/generate'&&req.method==='POST')return aiGenerate(req,env,user);
   if(path==='/api/ai/refine'&&req.method==='POST')return aiRefine(req,env,user);
+  if(path==='/api/tools/usage/reserve'&&req.method==='POST')return reserveToolUsage(req,env,user);
+  if(path==='/api/tools/usage/complete'&&req.method==='POST')return completeToolUsage(req,env,user);
+  if(path==='/api/tools/usage/release'&&req.method==='POST')return releaseToolUsage(req,env,user);
   if(path==='/api/tools/csv/analyze'&&req.method==='POST')return csvAnalyze(req,env,user);
   
   if(path==='/api/work'&&req.method==='GET'){const rows=await env.DB.prepare('SELECT id,kind,title,created_at,updated_at FROM work_items WHERE user_id=? ORDER BY updated_at DESC LIMIT 5000').bind(user.id).all();return json({items:rows.results||[],usage:await usageSnapshot(env,user)});}

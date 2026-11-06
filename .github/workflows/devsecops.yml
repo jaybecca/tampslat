@@ -26,6 +26,8 @@ jobs:
           node --check backend/worker.js
           node --check backend/billing.js
           node --check backend-client.js
+          node --check tool-usage.js
+          node --check workspace-orchestrator.js
           node --check site-locale.js
           node --check pricing-language.js
           node --check support-translations.js
@@ -36,6 +38,7 @@ jobs:
           node --check engines/document-preview.js
           node --check app.js
           node --check landing.js
+          node --check plans-data.js
 
       - name: Validate inline scripts in key UI pages
         run: |
@@ -44,7 +47,10 @@ jobs:
           const vm = require('node:vm');
           const files = [
             'index.html', 'pricing.html', 'support.html', 'template-library.html', 'blog/index.html', 'login.html',
-            'signup.html', 'tools.html', 'zip-studio.html', 'file-studio.html', 'pdf-studio.html', 'document-converter.html', 'vault-studio.html'
+            'signup.html', 'tools.html', 'document-studio.html', 'business-operations-studio.html', 'zip-studio.html',
+            'file-studio.html', 'pdf-studio.html', 'document-converter.html', 'vault-studio.html', 'spreadsheet-studio.html',
+            'batch-studio.html', 'design-studio.html', 'presentation-studio.html', 'font-studio.html', '3d-web-studio.html',
+            'ebook-studio.html', 'ai-studio.html'
           ];
           for (const file of files) {
             const html = fs.readFileSync(file, 'utf8');
@@ -58,6 +64,83 @@ jobs:
               if (!['text/javascript', 'application/javascript'].includes(type.toLowerCase())) continue;
               new vm.Script(match[2], { filename: file + ' inline script ' + (++number) });
             }
+          }
+          NODE
+
+      - name: Validate D1 migration chain
+        run: |
+          set -euo pipefail
+          DB_FILE=/tmp/tampslat-migrations.sqlite
+          sqlite3 "$DB_FILE" < backend/migrations/0001_init.sql
+          for migration in backend/migrations/*.sql; do
+            if [ "$migration" = "backend/migrations/0001_init.sql" ]; then continue; fi
+            sqlite3 "$DB_FILE" < "$migration"
+          done
+          sqlite3 "$DB_FILE" "SELECT name FROM sqlite_master WHERE type='table' AND name='tool_usage_counters';" | grep -qx 'tool_usage_counters'
+          sqlite3 "$DB_FILE" "SELECT name FROM sqlite_master WHERE type='table' AND name='tool_usage_reservations';" | grep -qx 'tool_usage_reservations'
+
+      - name: Validate studio usage instrumentation
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const studios = [
+            'document-studio.html', 'business-operations-studio.html', 'template-library.html',
+            'document-converter.html', 'pdf-studio.html', 'zip-studio.html', 'file-studio.html',
+            'vault-studio.html', 'spreadsheet-studio.html', 'batch-studio.html', 'design-studio.html',
+            'presentation-studio.html', 'font-studio.html', '3d-web-studio.html', 'ebook-studio.html',
+            'ai-studio.html'
+          ];
+          const allowed = new Set([
+            'document-studio', 'business-operations-studio', 'template-library', 'document-converter',
+            'pdf-studio', 'zip-studio', 'file-studio', 'vault-studio', 'spreadsheet-studio',
+            'batch-studio', 'design-studio', 'presentation-studio', 'font-studio', '3d-web-studio',
+            'ebook-studio', 'ai-studio'
+          ]);
+          for (const file of studios) {
+            const html = fs.readFileSync(file, 'utf8');
+            const guard = html.indexOf('<script src="tool-usage.js">');
+            const firstInline = html.search(/<script\b(?![^>]*\bsrc=)[^>]*>/i);
+            if (guard < 0 || (firstInline >= 0 && guard > firstInline)) {
+              throw new Error(file + ': usage guard must load before inline operation handlers');
+            }
+            for (const match of html.matchAll(/data-metered-tool=["']([^"']+)["']/g)) {
+              if (!allowed.has(match[1])) throw new Error(file + ': unknown metered tool ' + match[1]);
+            }
+          }
+          NODE
+
+      - name: Validate display currencies, regional checkout and email OTP
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const currencies = ['NGN', 'USD', 'GBP', 'EUR', 'CAD'];
+          for (const file of ['index.html', 'pricing.html']) {
+            const html = fs.readFileSync(file, 'utf8');
+            for (const currency of currencies) {
+              if (!html.includes('value="' + currency + '"')) {
+                throw new Error(file + ': missing display currency ' + currency);
+              }
+            }
+          }
+          const landing = fs.readFileSync('landing.js', 'utf8');
+          const pricing = fs.readFileSync('pricing.html', 'utf8');
+          if (!landing.includes('function checkoutCurrencyFor') || !landing.includes('currency:paymentCurrency')) {
+            throw new Error('Homepage must preserve display currency and normalize payment currency by region');
+          }
+          if (!pricing.includes('function checkoutCurrencyFor') || !pricing.includes('currency:paymentCurrency')) {
+            throw new Error('Pricing page must preserve display currency and normalize payment currency by region');
+          }
+          const signup = fs.readFileSync('signup.html', 'utf8');
+          const worker = fs.readFileSync('backend/worker.js', 'utf8');
+          const otpGuide = fs.readFileSync('docs/email-verification-otp.md', 'utf8');
+          if (!signup.includes('startResendCooldown') || !signup.includes('resendCooldownUntil')) {
+            throw new Error('Signup page must enforce the resend cooldown');
+          }
+          if (!worker.includes('resend-verification') || !worker.includes('3,900')) {
+            throw new Error('Worker resend endpoint must enforce the 3-per-15-minute limit');
+          }
+          if (!otpGuide.includes('1800 seconds') || !otpGuide.includes('{{ .Token }}')) {
+            throw new Error('OTP setup guide must document 30-minute OTP and token template');
           }
           NODE
 

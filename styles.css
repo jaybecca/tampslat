@@ -202,3 +202,24 @@ body.dark .public-footer>span{color:#66728a}
  .studio-category-content .public-product{min-height:0;padding:17px}
  .public-footer{padding:20px 16px}
 }
+
+/* Clear plan allowances and billing-cycle controls on the public homepage. */
+.homepage-billing-switch{margin:18px auto 22px}
+.billing-switch{display:flex;justify-content:center;gap:6px;width:max-content;max-width:100%;padding:5px;border:1px solid #e1def1;border-radius:14px;background:#fff}
+.billing-switch button{border:0;border-radius:10px;background:transparent;color:#58617a;padding:10px 16px;font-weight:800;cursor:pointer}
+.billing-switch button[aria-pressed="true"]{background:#6544e8;color:#fff;box-shadow:0 4px 12px #6544e833}
+.billing-switch button span{margin-left:5px;padding:3px 6px;border-radius:20px;background:#e8f8ef;color:#14764f;font-size:10px}
+.billing-switch button[aria-pressed="true"] span{background:#ffffff24;color:#fff}
+.plan-billing-note{min-height:24px;margin:-12px 0 14px;color:#68728b;font-size:11px;font-weight:750}
+.plan-usage{display:grid;gap:7px;margin:14px 0 2px;padding:13px 14px;border:1px solid #e6e2f7;border-radius:13px;background:#f8f7ff;color:#48516a;font-size:11px}
+.plan-usage>b{color:#5d43c8;font-size:11px;letter-spacing:.04em}
+.plan-usage span{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.plan-usage strong{color:#252c43}
+.plan-usage small{color:#788197;line-height:1.45;margin-top:3px}
+body.dark .plan-usage{background:#171d34;border-color:#3b4264;color:#c5cce0}
+body.dark .plan-usage>b,body.dark .plan-usage strong{color:#e5e8ff}
+body.dark .plan-usage small,body.dark .plan-billing-note{color:#aeb8d0}
+body.dark .homepage-billing-switch{background:#202744;border-color:#3a4261}
+body.dark .billing-switch button{color:#c6cce0}
+body.dark .billing-switch button[aria-pressed="true"]{background:#7258e8;color:#fff}
+@media(max-width:650px){.billing-switch button{padding:9px 12px;font-size:12px}.plan-usage{padding:11px}}

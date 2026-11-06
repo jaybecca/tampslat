@@ -13,11 +13,21 @@
     signup:(email,password)=>request('/auth/signup',{method:'POST',body:JSON.stringify({email,password})}),
     recover:(email)=>request('/auth/recover',{method:'POST',body:JSON.stringify({email})}),
     updatePassword:(accessToken,password)=>request('/auth/update-password',{method:'POST',body:JSON.stringify({accessToken,password})}),
-    login:(email,password)=>request('/auth/login',{method:'POST',body:JSON.stringify({email,password})}),
+    login:(email,password,rememberMe=false)=>request('/auth/login',{method:'POST',body:JSON.stringify({email,password,rememberMe})}),
+    verifyEmail:(email,token)=>request('/auth/verify-email',{method:'POST',body:JSON.stringify({email,token})}),
+    resendVerification:(email)=>request('/auth/resend-verification',{method:'POST',body:JSON.stringify({email})}),
     logout:()=>request('/auth/logout',{method:'POST',body:'{}'}),
     me:()=>request('/auth/me',{headers:{}}),
     generate:(task,prompt,context='')=>request('/ai/generate',{method:'POST',body:JSON.stringify({task,prompt,context})}),
     analyzeCsv:(csv,filename)=>request('/tools/csv/analyze',{method:'POST',body:JSON.stringify({csv,filename})}),
+    reserveToolUse:(toolKey)=>request('/tools/usage/reserve',{method:'POST',body:JSON.stringify({toolKey})}),
+    completeToolUse:(reservationId)=>request('/tools/usage/complete',{method:'POST',body:JSON.stringify({reservationId})}),
+    releaseToolUse:(reservationId)=>request('/tools/usage/release',{method:'POST',body:JSON.stringify({reservationId})}),
+    runToolUse:async(toolKey,operation,isSuccessful=()=>true)=>{
+      const reservation=await request('/tools/usage/reserve',{method:'POST',body:JSON.stringify({toolKey})});
+      try{const result=await operation();if(result===false||!isSuccessful(result))throw new Error('The operation did not complete successfully.');await request('/tools/usage/complete',{method:'POST',body:JSON.stringify({reservationId:reservation.reservationId})});return result;}
+      catch(error){try{await request('/tools/usage/release',{method:'POST',body:JSON.stringify({reservationId:reservation.reservationId})})}catch{}throw error;}
+    },
     listWork:()=>request('/work',{headers:{}}),
     getWork:(id)=>request('/work/'+encodeURIComponent(id),{headers:{}}),
     saveWork:(kind,title,content)=>request('/work',{method:'POST',body:JSON.stringify({kind,title,content})}),

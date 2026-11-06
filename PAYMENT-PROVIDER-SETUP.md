@@ -3,32 +3,52 @@
 ## Provider roles
 - Flutterwave: regional checkout for Nigeria and other supported African markets.
 - Paddle: international merchant-of-record checkout where supported.
+- Checkout is created by the Cloudflare Worker. Payment success is confirmed server-side from verified provider responses/webhooks; a browser redirect alone does not activate a plan.
 
-The public checkout selector is a provider-selection UI only. It deliberately does not collect card details or claim a payment has succeeded. Do not enable paid-plan activation until server-side checkout creation and webhook verification are implemented and tested.
+## Worker configuration
 
-## Cloudflare Worker secrets
-Set secrets through `wrangler secret put`, never in HTML, JavaScript, Git, or `[vars]`.
+Set secret values with `npx wrangler secret put NAME`. Never put provider secrets in HTML, browser JavaScript, Git, or `[vars]`.
 
-Flutterwave:
-- `FLW_SECRET_KEY`
-- `FLW_SECRET_HASH` (webhook verification secret hash)
+Live secret bindings:
+- `flutterwave_secret_key`
+- `flutterwave_webhook_secret_hash`
+- `paddle_api_key`
+- `paddle_webhook_secret`
 
-Paddle:
-- `PADDLE_API_KEY`
-- `PADDLE_WEBHOOK_SECRET`
-- `PADDLE_ENV` as a non-secret environment setting (`sandbox` or `production`)
+Sandbox secret bindings:
+- `flutterwave_secret_key_sandbox`
+- `flutterwave_webhook_secret_hash_sandbox`
+- `paddle_api_key_sandbox`
+- `paddle_webhook_secret_sandbox`
 
-Public configuration may include only provider client-side identifiers and public price IDs, where the provider requires them. Do not expose secret keys.
+Non-secret Worker variables:
+- `PAYMENT_MODE`: `sandbox` or `live`
+- `ALLOW_LIVE_PAYMENTS`: must be `true` before the Worker will create live checkout sessions; keep it `false` until explicit launch approval.
 
-## Required backend flow before launch
-1. Authenticate the customer and validate plan/price IDs against a server-side allowlist.
-2. Create the provider checkout session from the Worker using server-held secrets.
-3. Return only the provider's hosted checkout URL or short-lived client token.
-4. Verify webhook signatures using the raw request body and provider-specific signing rules.
-5. Make webhook processing idempotent; store provider event IDs and reject replays.
-6. Activate/renew/cancel entitlements only from verified webhook events, never from browser redirects.
-7. Record payment state transitions in an append-only audit log.
-8. Test success, decline, cancellation, duplicate webhook, invalid signature, refund and subscription lifecycle cases in provider sandbox environments.
+The Worker defaults to sandbox mode. Do not switch production to live mode or enable live payments without explicit approval and completed sandbox verification.
 
-## Current status
-The UI offers Flutterwave and Paddle choices, but checkout is intentionally disabled pending the backend flow above. This is not a live payment integration. Configure credentials only after the server routes and webhook verification are implemented.
+## Monthly and annual billing
+- Monthly paid plans use the published monthly plan price.
+- Annual paid plans receive a 20% discount and are charged as one annual payment.
+- Paddle creates a recurring subscription on the selected monthly or annual billing interval.
+- Flutterwave purchases are one-time payments and require manual renewal: 30 days of access for monthly purchases and 365 days for annual purchases.
+- AI credit top-ups are one-time purchases and are separate from plan allowances.
+
+The server calculates the checkout amount from its own plan catalogue. It does not trust a price supplied by the browser. Provider webhook processing is idempotent and entitlement changes are based on verified provider events.
+
+## Database migrations
+The Worker uses the D1 database configured in `wrangler.toml`. Apply pending migrations before deploying a release that depends on new tables or columns:
+
+```bash
+npx wrangler d1 migrations apply tampslat-db --remote
+```
+
+The current migration chain includes the billing tables, monthly account usage tracking, annual billing-cycle field, and per-studio usage counters/reservations. Confirm the migration status against the intended D1 database before applying it.
+
+## Verification checklist
+1. Confirm the Worker is using the intended sandbox bindings.
+2. Verify monthly and annual checkout creation in each supported provider sandbox.
+3. Verify successful payment, decline, cancellation, duplicate webhook, invalid signature, refund, and subscription lifecycle handling.
+4. Confirm monthly plans grant 30 days and annual plans grant 365 days where the provider does not supply an authoritative subscription period.
+5. Confirm account-save, CSV-check, and per-studio usage counters remain independent.
+6. Do not use real payment methods or enable live mode during routine CI validation.

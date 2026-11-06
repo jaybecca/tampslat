@@ -20,3 +20,13 @@ a.brand img,.public-brand img,.topbar .brand img,.top .brand img,.ops-top>a:firs
 /* Auth and compact card headers use the same full-size wordmark. */
 .auth-card>a img,.card>a img.logo,.auth-page .auth-story>a img{width:210px!important;height:48px!important;max-width:min(210px,48vw)!important;max-height:48px!important;object-fit:contain!important;object-position:left center!important;display:block!important}
 @media(max-width:720px){.auth-card>a img,.card>a img.logo,.auth-page .auth-story>a img{width:190px!important;height:44px!important;max-width:52vw!important;max-height:44px!important}}
+
+/* Keep the TAMPslat wordmark legible on every dark or coloured surface. */
+a.brand img,.brand img,.public-brand img,.footer-brand img,.top img,.topbar img,.ops-top>a:first-child img,.vault-top>a img,.auth-brand-link img,.auth-story>a img,.auth-mobile-logo{
+ background:#fff!important;
+ padding:5px!important;
+ border:1px solid #e8ebf2!important;
+ border-radius:10px!important;
+ box-shadow:0 2px 9px rgba(10,20,45,.08)!important;
+ filter:none!important;
+}
