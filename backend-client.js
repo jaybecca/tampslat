@@ -19,7 +19,7 @@
     verifyEmail:(email,token)=>request('/auth/verify-email',{method:'POST',body:JSON.stringify({email,token})}),
     resendVerification:(email)=>request('/auth/resend-verification',{method:'POST',body:JSON.stringify({email})}),
     logout:()=>request('/auth/logout',{method:'POST',body:'{}'}),
-    me:()=>request('/auth/me',{headers:{}}),
+    me:async()=>{const data=await request('/auth/me',{headers:{},cache:'no-store'});const email=String(data?.user?.email||'').trim();const name=String(data?.user?.name||data?.user?.full_name||data?.user?.display_name||'').trim();const initial=Array.from((name||email.split('@')[0]||email).trim())[0]?.toLocaleUpperCase();const avatar=document.getElementById('profileAvatarInitial');if(avatar&&initial){avatar.textContent=initial;const toggle=document.getElementById('profileMenuToggle');if(toggle)toggle.title=email||name;}return data;},
     generate:(task,prompt,context='')=>request('/ai/generate',{method:'POST',body:JSON.stringify({task,prompt,context})}),
     analyzeCsv:(csv,filename)=>request('/tools/csv/analyze',{method:'POST',body:JSON.stringify({csv,filename})}),
     reserveToolUse:(toolKey)=>request('/tools/usage/reserve',{method:'POST',body:JSON.stringify({toolKey})}),
