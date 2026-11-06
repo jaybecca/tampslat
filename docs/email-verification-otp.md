@@ -26,7 +26,8 @@ The OTP expiry setting also governs other email OTP and confirmation flows. Keep
 - Signup sends the confirmation email through Supabase Auth.
 - The signup page accepts the emailed code.
 - The Worker verifies the code with Supabase Auth, provisions the TAMPslat account, and creates a secure browser session.
-- Users can request a replacement code. The application applies a resend rate limit, and Supabase applies its own email rate limits.
+- Users can request a replacement code. The page enforces a 60-second resend cooldown to match Supabase's default signup-confirmation rate limit; the Worker also limits resends to 3 per 15 minutes, and Supabase applies its own email rate limits.
+- Changing OTP expiry to 1800 seconds does not by itself change a confirmation link into a code. The Confirm signup template must use `{{ .Token }}`.
 - Invalid, expired and already-used codes are rejected.
 
 **Important:** the dashboard email-template change is separate from GitHub deployment. Until the Confirm signup template is changed to use `{{ .Token }}`, Supabase will continue sending its existing confirmation-link email and the code-entry flow will not receive a code.
