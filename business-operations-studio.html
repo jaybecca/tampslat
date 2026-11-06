@@ -48,7 +48,7 @@ button.primary:hover,.btn.primary:hover{filter:saturate(1.12);transform:translat
 <button class="btn secondary" type="button" id="businessDesignViolet">Violet Executive</button><button class="btn secondary" type="button" id="businessDesignOcean">Ocean Professional</button><button class="btn secondary" type="button" id="businessDesignEmerald">Emerald Modern</button><button class="btn secondary" type="button" id="businessDesignSunset">Sunset Creative</button>
 </div><p id="businessDesignStatus" role="status" style="font-size:13px;color:#46516e">Step 1: Generate and review your document preview above. Design controls become useful once content is present.</p>
 </section><article class="ops-preview" id="preview" aria-live="polite" contenteditable="true" spellcheck="true"><p class="ops-empty-hint">Your document preview will appear here. Generate a document, then edit and format the content directly.</p></article></section></div></main>
-<script>
+<script src="backend-client.js"></script><script src="tool-usage.js"></script><script>
 (()=>{'use strict';const $=id=>document.getElementById(id);const businessMode=new URLSearchParams(location.search).get('studio')==='business';let kind=businessMode?'invoice':'resume',matrix=[];const schemas={
 resume:{title:'Resume / CV',fields:[['name','Full legal / professional name'],['role','Target roles / professional titles (one per line, e.g. HR Manager | Talent Acquisition | HR Business Partner)','textarea'],['email','Professional email'],['phone','Phone / WhatsApp'],['location','City, country'],['linkedin','LinkedIn URL'],['website','Portfolio / website URL'],['summary','Professional profile (3–5 lines)','textarea'],['skills','Core skills (group by category)','textarea'],['experience','Employment history: role | employer | location | dates | achievements','textarea'],['projects','Selected projects: name | context | tools | measurable result','textarea'],['education','Education: qualification | institution | location | dates','textarea'],['certifications','Certifications and professional training','textarea'],['awards','Awards, recognition and volunteering','textarea'],['languages','Languages and proficiency'],['references','References or “available on request”']]},
 cover:{title:'Cover Letter',fields:[['name','Full name'],['email','Email'],['company','Company'],['recipient','Hiring manager'],['role','Role'],['highlights','Relevant experience and achievements','textarea'],['motivation','Why this organisation and role?','textarea']]},
@@ -92,4 +92,4 @@ $('businessDesignEmerald').onclick=()=>setBusinessTheme(['#145443','#263b35','#f
 $('businessDesignSunset').onclick=()=>setBusinessTheme(['#873f38','#49343b','#fffaf5','#f07858'],'Sunset Creative');
 renderForm();applyDesign();
 })();
-</script><script src="backend-client.js"></script><script src="tool-usage.js"></script><script src="workspace-i18n.js"></script></body></html>
+</script><script src="workspace-i18n.js"></script></body></html>
