@@ -98,7 +98,7 @@ jobs:
           for (const file of studios) {
             const html = fs.readFileSync(file, 'utf8');
             const guard = html.indexOf('<script src="tool-usage.js">');
-            const firstInline = html.search(/<script\\b(?![^>]*\\bsrc=)[^>]*>/i);
+            const firstInline = html.search(/<script\b(?![^>]*\bsrc=)[^>]*>/i);
             if (guard < 0 || (firstInline >= 0 && guard > firstInline)) {
               throw new Error(file + ': usage guard must load before inline operation handlers');
             }
