@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.3';
-const supabase = createClient('https://qqfmsvepxxagszzhhjap.supabase.co','sb_publishable_zxfcbavvt1HnL1mPiO_zzA_4l9YoG56',{auth:{flowType:'pkce',persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+const supabase = createClient('https://qqfmsvepxxagszzhhjap.supabase.co','sb_publishable_zxfcbavvt1HnL1mPiO_zzA_4l9YoG56',{auth:{flowType:'pkce',persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
 document.querySelectorAll('[data-google-signin]').forEach(button=>{
  button.addEventListener('click',async()=>{
   const status=document.getElementById('googleAuthError');if(status){status.textContent='';status.style.display='none';}
