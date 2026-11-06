@@ -33,6 +33,8 @@ jobs:
           node --check support-translations.js
           node --check workspace-i18n.js
           node --check auth-language.js
+          node --check auth-google.js
+          node --check auth-confirmed.js
           node --check engines/ai-refinement-client.js
           node --check engines/studio-design-engine.js
           node --check engines/document-preview.js
@@ -131,7 +133,10 @@ jobs:
             throw new Error('Pricing page must preserve display currency and normalize payment currency by region');
           }
           const signup = fs.readFileSync('signup.html', 'utf8');
+          const login = fs.readFileSync('login.html', 'utf8');
           const worker = fs.readFileSync('backend/worker.js', 'utf8');
+          const google = fs.readFileSync('auth-google.js', 'utf8');
+          const callback = fs.readFileSync('auth-confirmed.js', 'utf8');
           const otpGuide = fs.readFileSync('docs/email-verification-otp.md', 'utf8');
           if (!signup.includes('startResendCooldown') || !signup.includes('resendCooldownUntil')) {
             throw new Error('Signup page must enforce the resend cooldown');
@@ -141,6 +146,15 @@ jobs:
           }
           if (!otpGuide.includes('1800 seconds') || !otpGuide.includes('{{ .Token }}')) {
             throw new Error('OTP setup guide must document 30-minute OTP and token template');
+          }
+          if (!signup.includes('data-google-signin') || !login.includes('data-google-signin') || !google.includes("provider:'google'")) {
+            throw new Error('Google sign-in must be available on both account screens');
+          }
+          if (!worker.includes('oauth-session') || !worker.includes('email-link-session') || !worker.includes('identities.length===0')) {
+            throw new Error('Worker must provision Google sessions, email-link sessions and reject duplicate signups clearly');
+          }
+          if (!callback.includes('exchangeCodeForSession') || !callback.includes('emailLinkSession')) {
+            throw new Error('Auth callback must complete Google and email-link sessions');
           }
           NODE
 
