@@ -148,7 +148,7 @@ function buildGallery(){
   card.dataset.category=t.category;card.dataset.search=(t.name+" "+t.category).toLowerCase();
   const viewport=document.createElement("div");viewport.className="gallery-preview";
   const preview=document.createElement("div");preview.className="paper gallery-paper";
-  preview.style.setProperty("--accent",t.accent);preview.innerHTML=paper.innerHTML;viewport.appendChild(preview);
+  preview.style.setProperty("--accent",t.accent);preview.dataset.templateId=String(t.id);preview.innerHTML=paper.innerHTML;preview.querySelectorAll("style").forEach(style=>{style.textContent=style.textContent.replaceAll(".paper",'.gallery-paper[data-template-id="'+t.id+'"]')});viewport.appendChild(preview);
   const meta=document.createElement("div");meta.className="gallery-card-meta";
   const title=document.createElement("div"),name=document.createElement("b"),category=document.createElement("small");
   name.textContent=t.name;category.textContent=t.category+" · Design "+String(((t.id-1)%10)+1);title.append(name,category);meta.appendChild(title);
