@@ -7,7 +7,7 @@ const uid = () => crypto.randomUUID();
 const b64url = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 async function sha256(text) { return b64url(await crypto.subtle.digest('SHA-256', encoder.encode(text))); }
 function cookie(req, name) { const header=req.headers.get('Cookie')||''; const found=header.split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'=')); return found ? decodeURIComponent(found.slice(name.length+1)) : ''; }
-function sessionCookie(token, maxAge) { return `tampslat_session=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`; }
+function sessionCookie(token, maxAge) { return `tampslat_session=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax${Number.isFinite(maxAge)?`; Max-Age=${maxAge}`:''}`; }
 function clearCookie() { return 'tampslat_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0'; }
 function allowedOrigin(req, env) {
   const origin=req.headers.get('Origin');
@@ -64,8 +64,9 @@ async function currentUser(req, env) {
   if(row?.plan_expires_at&&Date.parse(row.plan_expires_at)<=Date.now()){await env.DB.prepare(`UPDATE users SET plan='free',plan_expires_at=NULL,billing_provider=NULL,billing_subscription_id=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND plan_expires_at IS NOT NULL AND datetime(plan_expires_at)<=datetime('now')`).bind(row.id).run();row.plan='free';row.plan_expires_at=null;}
   return row||null;
 }
-async function newSession(env, userId) {
-  const token=b64url(crypto.getRandomValues(new Uint8Array(32))), hash=await sha256(token), expires=Math.floor(Date.now()/1000)+60*60*24*14;
+function sessionLifetime(rememberMe=false) { return rememberMe?60*60*24*30:60*60*12; }
+async function newSession(env, userId, rememberMe=false) {
+  const token=b64url(crypto.getRandomValues(new Uint8Array(32))), hash=await sha256(token), expires=Math.floor(Date.now()/1000)+sessionLifetime(rememberMe);
   await env.DB.prepare('INSERT INTO sessions(id,user_id,token_hash,expires_at) VALUES(?,?,?,?)').bind(uid(),userId,hash,expires).run();
   return token;
 }
@@ -216,7 +217,35 @@ async function route(req, env) {
       console.error('TAMPslat Supabase signup rejected',{status:auth.response.status,code:String(auth.data?.code||auth.data?.error_code||'')});
       return fail('We could not create your account. Check the details and try again.',400);
     }
-    return json({ok:true,message:'Your account request has been received. Check your inbox and click the verification link before signing in.'},201);
+    return json({ok:true,message:'Your account request has been received. Check your inbox for the six-digit email verification code.'},201);
+  }
+  if(path==='/api/auth/verify-email'&&req.method==='POST'){
+    if(!await rateLimit(env,`verify-email:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many verification attempts. Wait a little and request a new code.',429);
+    const d=await bodyJson(req,5000);if(!d)return fail('Invalid JSON.');
+    const email=String(d.email||'').trim().toLowerCase(),token=String(d.token||'').trim();
+    if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||!/^[0-9]{6,10}$/.test(token))return fail('Enter your email address and the verification code.');
+    const auth=await supabaseRequest(env,'/auth/v1/verify',{method:'POST',body:JSON.stringify({type:'signup',email,token})});
+    if(!auth)return fail('Authentication is temporarily unavailable. Please try again later or contact Support.',503);
+    if(!auth.response.ok){
+      if(auth.response.status===429)return fail('Too many verification attempts. Please wait before trying again.',429);
+      return fail('That verification code is invalid, already used or expired. Request a new code and try again.',401);
+    }
+    const authUser=auth.data?.user;
+    if(!authUser||!(authUser.email_confirmed_at||authUser.confirmed_at))return fail('Email verification could not be confirmed. Request a new code.',401);
+    let user;
+    try{user=await provisionSupabaseUser(env,authUser);}catch(e){console.error('TAMPslat verified identity provisioning failed',{name:e?.name||'Error',reason:e?.message||'unknown'});return fail('Your email is verified, but workspace setup did not finish. Please sign in or contact Support.',500);}
+    const session=await newSession(env,user.id,false);
+    return json({user:safeUser(user),message:'Email verified. Your workspace is ready.'},200,{'Set-Cookie':sessionCookie(session,null)});
+  }
+  if(path==='/api/auth/resend-verification'&&req.method==='POST'){
+    if(!await rateLimit(env,`resend-verification:${req.headers.get('CF-Connecting-IP')||'unknown'}`,3,900))return fail('Please wait before requesting another verification email.',429);
+    const d=await bodyJson(req,5000);if(!d)return fail('Invalid JSON.');
+    const email=String(d.email||'').trim().toLowerCase();
+    if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||email.length>254)return fail('Enter a valid email address.');
+    const auth=await supabaseRequest(env,'/auth/v1/resend',{method:'POST',body:JSON.stringify({type:'signup',email})});
+    if(!auth)return fail('Authentication is temporarily unavailable. Please try again later or contact Support.',503);
+    if(!auth.response.ok){if(auth.response.status===429)return fail('Please wait before requesting another verification email.',429);return fail('We could not resend the verification email. Check the address and try again.',502);}
+    return json({ok:true,message:'If this account is awaiting verification, a new code has been sent. Check your inbox.'});
   }
   if(path==='/api/auth/login'&&req.method==='POST'){
     if(!await rateLimit(env,`login:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many sign-in attempts. Try again later.',429);
@@ -241,8 +270,8 @@ async function route(req, env) {
       if(e?.message==='account_link_conflict')return fail('This email is linked to an existing application account. Contact support to complete account linking.',409);
       return fail('Your identity was verified, but we could not finish setting up your workspace. Please try again.',500);
     }
-    const token=await newSession(env,user.id);
-    return json({user:safeUser(user)},200,{'Set-Cookie':sessionCookie(token,60*60*24*14)});
+    const rememberMe=d.rememberMe===true,token=await newSession(env,user.id,rememberMe);
+    return json({user:safeUser(user)},200,{'Set-Cookie':sessionCookie(token,rememberMe?sessionLifetime(true):null)});
   }
   if(path==='/api/auth/recover'&&req.method==='POST'){
     if(!await rateLimit(env,`recover:${req.headers.get('CF-Connecting-IP')||'unknown'}`,5,3600))return fail('Please wait before requesting another password reset.',429);
