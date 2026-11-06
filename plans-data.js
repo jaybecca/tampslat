@@ -1,5 +1,5 @@
 /* Canonical plan catalogue shared by the public homepage and pricing page.
-   Every plan can access every studio. Paid tiers increase only account-backed monthly allowances.
+   Every plan can access every studio. Paid tiers increase monthly studio operations, account saves and server-side CSV checks. AI credits remain separate.
    Each completed studio operation is metered separately; account saves, CSV checks and AI credits are independent allowances. */
 window.TAMPSLAT_BILLING={annualDiscount:20};
 window.TAMPSLAT_PLANS={
