@@ -259,15 +259,15 @@ async function route(req, env) {
     if(password.length<10||password.length>128)return fail('Use a password between 10 and 128 characters.');
     const auth=await supabaseRequest(env,`/auth/v1/signup?redirect_to=${encodeURIComponent(authRedirect(req,env,'/auth-confirmed.html'))}`,{method:'POST',body:JSON.stringify({email,password})});
     if(!auth)return fail('Authentication is temporarily unavailable. Please try again later or contact Support.',503);
+    const signupNotice='If this is a new account, check your inbox for a one-time code or confirmation link. If you already have a TAMPslat account, no new signup email is sent; sign in or use Forgot password.';
     if(!auth.response.ok) {
       const message=String(auth.data?.msg||auth.data?.message||'');
       if(auth.response.status===429)return fail('Too many account attempts. Please try again later.',429);
-      if(auth.response.status===422 || /already registered|already exists/i.test(message))return fail('An account may already exist for this email. Try signing in.',409);
+      if(auth.response.status===422 || /already registered|already exists/i.test(message))return json({ok:true,confirmationRequired:true,message:signupNotice},201);
       console.error('TAMPslat Supabase signup rejected',{status:auth.response.status,code:String(auth.data?.code||auth.data?.error_code||'')});
       return fail('We could not create your account. Check the details and try again.',400);
     }
     const createdUser=auth.data?.user;
-    const signupNotice='If this is a new account, check your inbox for a one-time code or confirmation link. If you already have a TAMPslat account, no new signup email is sent; sign in or use Forgot password.';
     if(Array.isArray(createdUser?.identities)&&createdUser.identities.length===0)return json({ok:true,confirmationRequired:true,message:signupNotice},201);
     if(auth.data?.session&&createdUser&&(createdUser.email_confirmed_at||createdUser.confirmed_at)){
       let user;try{user=await provisionSupabaseUser(env,createdUser);}catch(e){console.error('TAMPslat immediate signup provisioning failed',{name:e?.name||'Error',reason:e?.message||'unknown'});return fail('Your account was created, but workspace setup did not finish. Please sign in or contact Support.',500);}
