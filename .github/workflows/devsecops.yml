@@ -80,6 +80,7 @@ jobs:
           const client = fs.readFileSync('backend-client.js', 'utf8');
           const promo = fs.readFileSync('promo-banner.js', 'utf8');
           if (!wrangler.includes("name = 'tampslat'") || !wrangler.includes('run_worker_first = ["/*"]')) throw new Error('All site and API requests must pass through the main tampslat Worker');
+          if (!/\bbinding\s*=\s*["']ASSETS["']/.test(wrangler)) throw new Error('Main Worker must declare the ASSETS binding used by env.ASSETS.fetch(req)');
           if (!worker.includes('env.ASSETS.fetch(req)') || !worker.includes('/promo-banner.js')) throw new Error('Main Worker must serve static assets and inject the promo strip');
           if (!worker.includes('/api/ads/active') || !worker.includes('/api/admin/ads') || !worker.includes("['pro','business'].includes(user.plan)")) throw new Error('Admin ad management and Pro/Business ad preferences must be server-enforced');
           if (!promo.includes('/api/ads/active') || promo.includes('window.TAMPSLAT_PROMOS')) throw new Error('Promotional strip must load admin-managed campaigns');
