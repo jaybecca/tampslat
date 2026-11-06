@@ -36,6 +36,12 @@
     deleteWork:(id)=>request('/work/'+encodeURIComponent(id),{method:'DELETE'}),
     billing:()=>request('/billing/summary',{headers:{}}),
     usage:()=>request('/usage/summary',{headers:{}}),
-    adminOverview:()=>request('/admin/overview',{headers:{}})
+    adminOverview:()=>request('/admin/overview',{headers:{}}),
+    adsPreference:()=>request('/ads/preference',{headers:{}}),
+    setAdsPreference:(adsEnabled)=>request('/ads/preference',{method:'PUT',body:JSON.stringify({adsEnabled})}),
+    adminAds:()=>request('/admin/ads',{headers:{}}),
+    createAdminAd:(data)=>request('/admin/ads',{method:'POST',body:JSON.stringify(data)}),
+    setAdminAdEnabled:(id,enabled)=>request('/admin/ads/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({enabled})}),
+    deleteAdminAd:(id)=>request('/admin/ads/'+encodeURIComponent(id),{method:'DELETE'})
   };
 })();

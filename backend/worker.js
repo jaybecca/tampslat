@@ -249,6 +249,24 @@ async function route(req, env) {
   }
   if(path==='/api/health'&&req.method==='GET')return json({ok:true,service:'tampslat',time:new Date().toISOString(),features:{auth:true,ai:Boolean(env.OPENAI_API_KEY),ocr:true,database:Boolean(env.DB)}});
   if(!env.DB)return fail('Service is temporarily unavailable. Please try again later or contact Support.',503);
+  if(path==='/api/ads/active'&&req.method==='GET'){
+    const viewer=await currentUser(req,env);
+    if(viewer&&['pro','business'].includes(viewer.plan)){
+      const pref=await env.DB.prepare('SELECT ads_enabled FROM ad_preferences WHERE user_id=?').bind(viewer.id).first();
+      if(pref&&Number(pref.ads_enabled)===0)return json({ads:[],plan:viewer.plan,adsEnabled:false});
+    }
+    const rows=await env.DB.prepare("SELECT id,title,description,target_url,alt_text,placement FROM ad_campaigns WHERE enabled=1 AND placement='footer-strip' AND (start_at IS NULL OR datetime(start_at)<=datetime('now')) AND (end_at IS NULL OR datetime(end_at)>datetime('now')) ORDER BY sort_order ASC,created_at DESC LIMIT 8").all();
+    return json({ads:(rows.results||[]).map(a=>({...a,imageUrl:'/api/ads/image/'+a.id})),plan:viewer?.plan||'guest',adsEnabled:true},200,{'Vary':'Cookie'});
+  }
+  const publicAdImage=path.match(/^\/api\/ads\/image\/([a-f0-9-]{36})$/i);
+  if(publicAdImage&&req.method==='GET'){
+    const row=await env.DB.prepare('SELECT image_key,mime_type,enabled FROM ad_campaigns WHERE id=?').bind(publicAdImage[1]).first();
+    if(!row||!env.FILES)return fail('Advert image not found.',404);
+    if(!row.enabled){const viewer=await currentUser(req,env);if(viewer?.role!=='admin')return fail('Advert image not found.',404);}
+    const object=await env.FILES.get(row.image_key);if(!object)return fail('Advert image not found.',404);
+    return new Response(object.body,{headers:{'Content-Type':row.mime_type||object.httpMetadata?.contentType||'application/octet-stream','Cache-Control':'public, max-age=3600','X-Content-Type-Options':'nosniff'}});
+  }
+
   if(path==='/api/webhooks/flutterwave'&&req.method==='POST')return handleBilling(req,env,null,path);if(path==='/api/webhooks/paddle'&&req.method==='POST')return handleBilling(req,env,null,path);
 
   if(path==='/api/auth/signup'&&req.method==='POST'){
@@ -399,6 +417,51 @@ async function route(req, env) {
   if(path==='/api/auth/me'&&req.method==='GET'){const u=await currentUser(req,env);return u?json({user:safeUser(u)}):fail('Not signed in.',401);}
   const user=await currentUser(req,env);if(!user)return fail('Sign in to use this feature.',401);
   const billingResponse=await handleBilling(req,env,user,path);if(billingResponse)return billingResponse;
+  if(path==='/api/ads/preference'&&req.method==='GET'){
+    const row=await env.DB.prepare('SELECT ads_enabled FROM ad_preferences WHERE user_id=?').bind(user.id).first();
+    const eligible=['pro','business'].includes(user.plan);
+    return json({plan:user.plan,eligible,locked:!eligible,adsEnabled:eligible?(row?Number(row.ads_enabled)!==0:true):true});
+  }
+  if(path==='/api/ads/preference'&&req.method==='PUT'){
+    if(!['pro','business'].includes(user.plan))return fail('Ad-free preferences are available on Pro and Business plans only.',403);
+    const d=await bodyJson(req,2000);if(!d||typeof d.adsEnabled!=='boolean')return fail('Choose whether to show adverts.');
+    await env.DB.prepare('INSERT INTO ad_preferences(user_id,ads_enabled,updated_at) VALUES(?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id) DO UPDATE SET ads_enabled=excluded.ads_enabled,updated_at=CURRENT_TIMESTAMP').bind(user.id,d.adsEnabled?1:0).run();
+    return json({ok:true,plan:user.plan,adsEnabled:d.adsEnabled});
+  }
+  if(path==='/api/admin/ads'&&req.method==='GET'){
+    if(user.role!=='admin')return fail('Administrator access required.',403);
+    const rows=await env.DB.prepare('SELECT id,title,description,target_url,alt_text,mime_type,placement,enabled,start_at,end_at,sort_order,created_at FROM ad_campaigns ORDER BY sort_order ASC,created_at DESC').all();
+    return json({ads:(rows.results||[]).map(a=>({...a,imageUrl:'/api/ads/image/'+a.id}))});
+  }
+  if(path==='/api/admin/ads'&&req.method==='POST'){
+    if(user.role!=='admin')return fail('Administrator access required.',403);
+    const d=await bodyJson(req,3000000);if(!d)return fail('Invalid advert details.');
+    const title=String(d.title||'').trim().slice(0,100),description=String(d.description||'').trim().slice(0,180),altText=String(d.altText||title).trim().slice(0,140);
+    let targetUrl='';try{const u=new URL(String(d.targetUrl||''));if(u.protocol!=='https:')throw new Error();targetUrl=u.toString();}catch{return fail('Use a valid HTTPS destination link.');}
+    const mime=String(d.mimeType||'');if(!['image/jpeg','image/png','image/webp'].includes(mime))return fail('Upload a JPG, PNG or WebP image.');
+    const encoded=String(d.imageBase64||'');if(!title||encoded.length<100||encoded.length>2800000)return fail('Add a title and an image smaller than 2 MB.');
+    let bytes;try{const raw=atob(encoded);if(raw.length>2097152)return fail('Image must be 2 MB or smaller.');bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);}catch{return fail('The image upload could not be read.');}
+    if(!env.FILES)return fail('Advert file storage is not configured.',503);
+    const id=uid(),ext=mime==='image/jpeg'?'jpg':mime==='image/png'?'png':'webp',key='ads/'+id+'.'+ext;
+    await env.FILES.put(key,bytes,{httpMetadata:{contentType:mime,cacheControl:'public, max-age=3600'}});
+    try{await env.DB.prepare("INSERT INTO ad_campaigns(id,title,description,target_url,alt_text,image_key,mime_type,placement,enabled,sort_order) VALUES(?,?,?,?,?,?,?,'footer-strip',1,?)").bind(id,title,description,targetUrl,altText,key,mime,Math.max(0,Math.min(999,Number(d.sortOrder)||0))).run();}
+    catch(error){await env.FILES.delete(key);throw error;}
+    await env.DB.prepare("INSERT INTO audit_events(id,user_id,event_type,detail_json) VALUES(?,?,?,?)").bind(uid(),user.id,'admin.ad.created',JSON.stringify({adId:id})).run();
+    return json({ok:true,ad:{id,title,description,target_url:targetUrl,alt_text:altText,imageUrl:'/api/ads/image/'+id,enabled:1}},201);
+  }
+  const adminAdMatch=path.match(/^\/api\/admin\/ads\/([a-f0-9-]{36})$/i);
+  if(adminAdMatch&&req.method==='PATCH'){
+    if(user.role!=='admin')return fail('Administrator access required.',403);
+    const d=await bodyJson(req,3000);if(!d||typeof d.enabled!=='boolean')return fail('Invalid advert status.');
+    const result=await env.DB.prepare('UPDATE ad_campaigns SET enabled=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(d.enabled?1:0,adminAdMatch[1]).run();
+    return result.meta?.changes?json({ok:true,enabled:d.enabled}):fail('Advert not found.',404);
+  }
+  if(adminAdMatch&&req.method==='DELETE'){
+    if(user.role!=='admin')return fail('Administrator access required.',403);
+    const row=await env.DB.prepare('SELECT image_key FROM ad_campaigns WHERE id=?').bind(adminAdMatch[1]).first();if(!row)return fail('Advert not found.',404);
+    await env.DB.prepare('DELETE FROM ad_campaigns WHERE id=?').bind(adminAdMatch[1]).run();if(env.FILES)await env.FILES.delete(row.image_key);
+    return json({ok:true});
+  }
   if(path==='/api/admin/overview'&&req.method==='GET'){
     if(user.role!=='admin')return fail('Administrator access required.',403);
     const period=usagePeriod();

@@ -53,7 +53,7 @@ jobs:
             'signup.html', 'tools.html', 'document-studio.html', 'business-operations-studio.html', 'zip-studio.html',
             'file-studio.html', 'pdf-studio.html', 'document-converter.html', 'vault-studio.html', 'spreadsheet-studio.html',
             'batch-studio.html', 'design-studio.html', 'presentation-studio.html', 'font-studio.html', '3d-web-studio.html',
-            'ebook-studio.html', 'ai-studio.html'
+            'ebook-studio.html', 'ai-studio.html', 'admin.html', 'settings.html'
           ];
           for (const file of files) {
             const html = fs.readFileSync(file, 'utf8');
@@ -81,8 +81,13 @@ jobs:
           const promo = fs.readFileSync('promo-banner.js', 'utf8');
           if (!wrangler.includes("name = 'tampslat'") || !wrangler.includes('run_worker_first = ["/*"]')) throw new Error('All site and API requests must pass through the main tampslat Worker');
           if (!worker.includes('env.ASSETS.fetch(req)') || !worker.includes('/promo-banner.js')) throw new Error('Main Worker must serve static assets and inject the promo strip');
+          if (!worker.includes('/api/ads/active') || !worker.includes('/api/admin/ads') || !worker.includes("['pro','business'].includes(user.plan)")) throw new Error('Admin ad management and Pro/Business ad preferences must be server-enforced');
+          if (!promo.includes('/api/ads/active') || promo.includes('window.TAMPSLAT_PROMOS')) throw new Error('Promotional strip must load admin-managed campaigns');
+          if (!fs.readFileSync('backend/migrations/0007_advertising.sql','utf8').includes('ad_preferences')) throw new Error('Advertising preference migration is missing');
+          if (!fs.readFileSync('admin.html','utf8').includes('1200 × 160 px') || !fs.readFileSync('admin.html','utf8').includes('createAdminAd')) throw new Error('Admin advert uploader must show image dimensions and support uploads');
+          if (!fs.readFileSync('settings.html','utf8').includes('setAdsPreference')) throw new Error('Plan-based advert preferences must be available in settings');
           if (client.includes('tampslat-api')) throw new Error('Frontend must not depend on the retired API Worker');
-          for (const url of ['https://tampops.tampconsulting.space','https://education.tampconsulting.space','https://www.tampconsulting.space']) if (!promo.includes(url)) throw new Error('Missing configured TAMP product promotion: ' + url);
+          if (!promo.includes('Sponsored promotions') || !promo.includes('noopener noreferrer sponsored')) throw new Error('Admin-managed advert strip must remain clearly labelled and use safe external links');
           NODE
 
       - name: Validate D1 migration chain
@@ -96,6 +101,8 @@ jobs:
           done
           sqlite3 "$DB_FILE" "SELECT name FROM sqlite_master WHERE type='table' AND name='tool_usage_counters';" | grep -qx 'tool_usage_counters'
           sqlite3 "$DB_FILE" "SELECT name FROM sqlite_master WHERE type='table' AND name='tool_usage_reservations';" | grep -qx 'tool_usage_reservations'
+          sqlite3 "$DB_FILE" "SELECT name FROM sqlite_master WHERE type='table' AND name='ad_campaigns';" | grep -qx 'ad_campaigns'
+          sqlite3 "$DB_FILE" "SELECT name FROM sqlite_master WHERE type='table' AND name='ad_preferences';" | grep -qx 'ad_preferences'
 
       - name: Validate studio usage instrumentation
         run: |
