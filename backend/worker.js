@@ -46,16 +46,53 @@ async function releaseUsage(env,user,feature,period) {
 async function recordUsage(env,user,feature,period,metadata={}) {
   await env.DB.prepare('INSERT INTO usage_events(id,user_id,period_key,feature,metadata_json) VALUES(?,?,?,?,?)').bind(uid(),user.id,period,feature,JSON.stringify(metadata)).run();
 }
+const TOOL_KEYS = new Set(['document-studio','business-operations-studio','template-library','document-converter','pdf-studio','zip-studio','file-studio','vault-studio','spreadsheet-studio','batch-studio','design-studio','presentation-studio','font-studio','3d-web-studio','ebook-studio','ai-studio']);
 async function usageSnapshot(env,user) {
   const period=usagePeriod(),limits=PLAN_LIMITS[user.plan]||PLAN_LIMITS.free;
   const results=await Promise.all([
     env.DB.prepare('SELECT feature,used FROM usage_counters WHERE user_id=? AND period_key=?').bind(user.id,period).all(),
-    env.DB.prepare("SELECT COUNT(*) AS requests,COALESCE(SUM(-amount),0) AS credits_spent FROM credit_ledger WHERE user_id=? AND event_type IN ('ai_usage','ai_refinement') AND substr(created_at,1,7)=?").bind(user.id,period).first()
+    env.DB.prepare("SELECT COUNT(*) AS requests,COALESCE(SUM(-amount),0) AS credits_spent FROM credit_ledger WHERE user_id=? AND event_type IN ('ai_usage','ai_refinement') AND substr(created_at,1,7)=?").bind(user.id,period).first(),
+    env.DB.prepare('SELECT tool_key,used FROM tool_usage_counters WHERE user_id=? AND period_key=?').bind(user.id,period).all()
   ]);
   const usage={saved_work:0,csv_analysis:0};
   for(const row of results[0].results||[])if(Object.prototype.hasOwnProperty.call(usage,row.feature))usage[row.feature]=Number(row.used)||0;
+  const toolUsage={};for(const row of results[2].results||[])toolUsage[row.tool_key]=Number(row.used)||0;
   const ai=results[1]||{};
-  return {plan:user.plan,period,periodTimezone:'UTC',limits,usage,ai:{requests:Number(ai.requests)||0,creditsSpent:Number(ai.credits_spent)||0},credits:Number(user.credits_balance)||0};
+  return {plan:user.plan,period,periodTimezone:'UTC',limits,usage,toolUsage,toolUseLimit:user.plan==='free'?5:null,toolUseLimitLabel:user.plan==='free'?'5 per tool per calendar month':'No per-tool monthly cap',ai:{requests:Number(ai.requests)||0,creditsSpent:Number(ai.credits_spent)||0},credits:Number(user.credits_balance)||0};
+}
+async function reserveToolUsage(req,env,user) {
+  const data=await bodyJson(req,3000);if(!data)return fail('Invalid tool-use request.');
+  const toolKey=String(data.toolKey||'');
+  if(!TOOL_KEYS.has(toolKey))return fail('Unknown tool.',400);
+  const period=usagePeriod(),limit=user.plan==='free'?5:2147483647;
+  const row=await env.DB.prepare('INSERT INTO tool_usage_counters(user_id,period_key,tool_key,used) VALUES(?,?,?,1) ON CONFLICT(user_id,period_key,tool_key) DO UPDATE SET used=used+1,updated_at=CURRENT_TIMESTAMP WHERE used < ? RETURNING used').bind(user.id,period,toolKey,limit).first();
+  if(!row)return fail('You have used all 5 free operations for this tool this month. Your allowance resets on the first day of next month (UTC).',429);
+  const reservationId=uid();
+  try {
+    await env.DB.prepare("INSERT INTO tool_usage_reservations(id,user_id,period_key,tool_key,status) VALUES(?,?,?,?,'pending')").bind(reservationId,user.id,period,toolKey).run();
+  } catch(error) {
+    await env.DB.prepare('UPDATE tool_usage_counters SET used=MAX(0,used-1),updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND period_key=? AND tool_key=?').bind(user.id,period,toolKey).run();
+    throw error;
+  }
+  return json({reservationId,toolKey,period,used:Number(row.used),limit:user.plan==='free'?5:null});
+}
+async function completeToolUsage(req,env,user) {
+  const data=await bodyJson(req,3000);if(!data)return fail('Invalid completion request.');
+  const idValue=String(data.reservationId||'');
+  if(!/^[0-9a-f-]{36}$/i.test(idValue))return fail('Invalid usage reservation.',400);
+  const result=await env.DB.prepare("UPDATE tool_usage_reservations SET status='completed',completed_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=? AND status='pending'").bind(idValue,user.id).run();
+  if(result.meta?.changes)return json({ok:true});
+  const existing=await env.DB.prepare('SELECT status FROM tool_usage_reservations WHERE id=? AND user_id=?').bind(idValue,user.id).first();
+  return existing?.status==='completed'?json({ok:true}):fail('Usage reservation not found or already released.',404);
+}
+async function releaseToolUsage(req,env,user) {
+  const data=await bodyJson(req,3000);if(!data)return fail('Invalid release request.');
+  const idValue=String(data.reservationId||'');
+  if(!/^[0-9a-f-]{36}$/i.test(idValue))return fail('Invalid usage reservation.',400);
+  const reservation=await env.DB.prepare("UPDATE tool_usage_reservations SET status='released' WHERE id=? AND user_id=? AND status='pending' RETURNING period_key,tool_key").bind(idValue,user.id).first();
+  if(!reservation)return json({ok:true,released:false});
+  await env.DB.prepare('UPDATE tool_usage_counters SET used=MAX(0,used-1),updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND period_key=? AND tool_key=?').bind(user.id,reservation.period_key,reservation.tool_key).run();
+  return json({ok:true,released:true});
 }
 async function currentUser(req, env) {
   const token=cookie(req,'tampslat_session'); if(!token)return null;
@@ -314,6 +351,9 @@ async function route(req, env) {
   }
   if(path==='/api/ai/generate'&&req.method==='POST')return aiGenerate(req,env,user);
   if(path==='/api/ai/refine'&&req.method==='POST')return aiRefine(req,env,user);
+  if(path==='/api/tools/usage/reserve'&&req.method==='POST')return reserveToolUsage(req,env,user);
+  if(path==='/api/tools/usage/complete'&&req.method==='POST')return completeToolUsage(req,env,user);
+  if(path==='/api/tools/usage/release'&&req.method==='POST')return releaseToolUsage(req,env,user);
   if(path==='/api/tools/csv/analyze'&&req.method==='POST')return csvAnalyze(req,env,user);
   
   if(path==='/api/work'&&req.method==='GET'){const rows=await env.DB.prepare('SELECT id,kind,title,created_at,updated_at FROM work_items WHERE user_id=? ORDER BY updated_at DESC LIMIT 5000').bind(user.id).all();return json({items:rows.results||[],usage:await usageSnapshot(env,user)});}
