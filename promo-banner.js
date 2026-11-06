@@ -31,25 +31,22 @@
       const list = document.createElement('div');
       list.className = 'ts-ad-list';
       ads.forEach(ad => {
-        if (!ad || typeof ad.imageUrl !== 'string' || typeof ad.target_url !== 'string' || !ad.target_url.startsWith('https://')) return;
-        const link = document.createElement('a');
-        link.className = 'ts-ad-link';
-        link.href = ad.target_url;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer sponsored';
+        if (!ad || typeof ad.imageUrl !== 'string') return;
+        const item = document.createElement('div');
+        item.className = 'ts-ad-link';
         const image = document.createElement('img');
         image.src = ad.imageUrl;
         image.alt = ad.alt_text || ad.title || 'Sponsored advert';
         image.loading = 'lazy';
         image.decoding = 'async';
-        link.appendChild(image);
+        item.appendChild(image);
         if (ad.description) {
           const caption = document.createElement('span');
           caption.className = 'ts-ad-copy';
           caption.textContent = ad.description;
-          link.appendChild(caption);
+          item.appendChild(caption);
         }
-        list.appendChild(link);
+        list.appendChild(item);
       });
       if (!list.childElementCount) return;
       inner.append(label, list);
