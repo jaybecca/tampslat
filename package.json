@@ -2,7 +2,7 @@
   "name": "tampslat-platform",
   "version": "0.2.0",
   "private": true,
-  "description": "TAMPslat Digital and Ready \u2014 static workspace with Cloudflare Workers backend",
+  "description": "TAMPslat Digital and Ready — static workspace with Cloudflare Workers backend",
   "scripts": {
     "dev:api": "wrangler dev",
     "deploy:api": "wrangler deploy",
@@ -22,5 +22,9 @@
   },
   "devDependencies": {
     "wrangler": "^4.45.0"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.57.0"
   }
 }
