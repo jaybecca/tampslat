@@ -8,6 +8,7 @@ const showError=error=>{title.textContent='Sign-in could not be completed';messa
 async function finishGoogle(){
  title.textContent='Completing Google sign-in…';message.textContent='Please wait while we securely open your TAMPslat workspace.';
  const code=params.get('code');if(!code)throw new Error(params.get('error_description')||'Google did not return a valid sign-in code.');
+ history.replaceState(null,'',location.pathname);
  const {data,error}=await supabase.auth.exchangeCodeForSession(code);if(error)throw error;
  const accessToken=data?.session?.access_token;if(!accessToken)throw new Error('Google sign-in completed without a valid session.');
  await window.TAMPSLAT_API.oauthSession(accessToken);
@@ -17,9 +18,9 @@ async function finishGoogle(){
 }
 async function finishEmailLink(){
  const accessToken=hash.get('access_token');if(!accessToken)return false;
+ history.replaceState(null,'',location.pathname);
  title.textContent='Confirming your email…';message.textContent='Please wait while we securely finish setting up your TAMPslat workspace.';
  await window.TAMPSLAT_API.emailLinkSession(accessToken);
- history.replaceState(null,'',location.pathname);
  location.replace('tools.html');return true;
 }
 (async()=>{
