@@ -51,7 +51,7 @@ async function releaseStaleToolReservations(env,user,period) {
   // A closed tab or lost network response must not permanently consume a use.
   // Pending reservations older than two hours are treated as abandoned.
   await env.DB.batch([
-    env.DB.prepare(`UPDATE tool_usage_counters SET used=MAX(0,used-(SELECT COUNT(*) FROM tool_usage_reservations r WHERE r.user_id=? AND r.period_key=? AND r.tool_key=tool_usage_counters.tool_key AND r.status='pending' AND r.created_at < datetime('now','-2 hours')),updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND period_key=? AND EXISTS(SELECT 1 FROM tool_usage_reservations r WHERE r.user_id=? AND r.period_key=? AND r.tool_key=tool_usage_counters.tool_key AND r.status='pending' AND r.created_at < datetime('now','-2 hours'))`).bind(user.id,period,user.id,period,user.id,period),
+    env.DB.prepare(`UPDATE tool_usage_counters SET used=MAX(0,used-(SELECT COUNT(*) FROM tool_usage_reservations r WHERE r.user_id=? AND r.period_key=? AND r.tool_key=tool_usage_counters.tool_key AND r.status='pending' AND r.created_at < datetime('now','-2 hours'))),updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND period_key=? AND EXISTS(SELECT 1 FROM tool_usage_reservations r WHERE r.user_id=? AND r.period_key=? AND r.tool_key=tool_usage_counters.tool_key AND r.status='pending' AND r.created_at < datetime('now','-2 hours'))`).bind(user.id,period,user.id,period,user.id,period),
     env.DB.prepare(`UPDATE tool_usage_reservations SET status='released' WHERE user_id=? AND period_key=? AND status='pending' AND created_at < datetime('now','-2 hours')`).bind(user.id,period)
   ]);
 }
