@@ -267,13 +267,14 @@ async function route(req, env) {
       return fail('We could not create your account. Check the details and try again.',400);
     }
     const createdUser=auth.data?.user;
-    if(Array.isArray(createdUser?.identities)&&createdUser.identities.length===0)return fail('An account already exists for this email. Please sign in instead.',409);
+    const signupNotice='If this is a new account, check your inbox for a one-time code or confirmation link. If you already have a TAMPslat account, no new signup email is sent; sign in or use Forgot password.';
+    if(Array.isArray(createdUser?.identities)&&createdUser.identities.length===0)return json({ok:true,confirmationRequired:true,message:signupNotice},201);
     if(auth.data?.session&&createdUser&&(createdUser.email_confirmed_at||createdUser.confirmed_at)){
       let user;try{user=await provisionSupabaseUser(env,createdUser);}catch(e){console.error('TAMPslat immediate signup provisioning failed',{name:e?.name||'Error',reason:e?.message||'unknown'});return fail('Your account was created, but workspace setup did not finish. Please sign in or contact Support.',500);}
       let token;try{token=await newSession(env,user.id,false);}catch(e){console.error('TAMPslat signup session creation failed',{name:e?.name||'Error',reason:e?.message||'unknown'});return fail('Your account was created, but we could not start your session. Please sign in.',503);}
       return json({ok:true,sessionCreated:true,user:safeUser(user)},201,{'Set-Cookie':sessionCookie(token,null)});
     }
-    return json({ok:true,confirmationRequired:true,message:'Your account was created. Check your inbox for the one-time code or confirmation link. Use the code here, or open the link to verify your email.'},201);
+    return json({ok:true,confirmationRequired:true,message:signupNotice+' Use the code here, or open the link to verify your email.'},201);
   }
   if(path==='/api/auth/verify-email'&&req.method==='POST'){
     if(!await rateLimit(env,`verify-email:${req.headers.get('CF-Connecting-IP')||'unknown'}`,12,900))return fail('Too many verification attempts. Wait a little and request a new code.',429);
