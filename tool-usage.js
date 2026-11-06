@@ -22,7 +22,7 @@
     if(result===false)throw new Error('The operation did not complete.');
     await wait();
     const after=statusText(),changed=after!==before;
-    if(changed&&failure.test(after.slice(Math.max(0,before.length))))throw new Error('The operation did not complete successfully.');
+    if(changed&&failure.test(after.startsWith(before)?after.slice(before.length):after))throw new Error('The operation did not complete successfully.');
     await window.TAMPSLAT_API.completeToolUse(reservation.reservationId);
     window.dispatchEvent(new CustomEvent('tampslat-tool-usage-updated',{detail:{toolKey:key,used:reservation.used,limit:reservation.limit}}));
     if(reservation.limit)notify(key.replace(/-/g,' ')+' · '+reservation.used+' of '+reservation.limit+' free uses this month.');
