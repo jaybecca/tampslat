@@ -15,3 +15,24 @@ window.TAMPSLAT_USAGE_LABELS={
  es:{monthly:"Límites mensuales de la cuenta",saved:"Guardados en la cuenta",csv:"Controles de calidad CSV del servidor",reset:"Se restablece el primer día de cada mes natural (UTC); los límites no utilizados no se acumulan",perMonth:"/ mes",startFree:"Empezar gratis",choose:"Elegir"},
  ar:{monthly:"حدود الحساب الشهرية",saved:"عمليات الحفظ في الحساب",csv:"فحوصات جودة CSV على الخادم",reset:"تُعاد في اليوم الأول من كل شهر تقويمي (UTC) ولا تُرحّل الحدود غير المستخدمة",perMonth:"/ شهريًا",startFree:"ابدأ مجانًا",choose:"اختر"}
 };
+
+/* Per-studio operation allowance: five completed uses on Free; paid tiers have no per-studio cap. */
+for (const [key, plan] of Object.entries(window.TAMPSLAT_PLANS)) {
+  plan.limits = plan.limits || {};
+  plan.limits.tool_uses_per_studio = key === 'free' ? 5 : null;
+  if (key === 'free') {
+    plan.features.push('5 completed operations per studio per calendar month across all 16 studios');
+    const translated = {
+      fr:'5 opérations terminées par studio et par mois civil dans les 16 studios',
+      pt:'5 operações concluídas por estúdio por mês civil nos 16 estúdios',
+      es:'5 operaciones completadas por estudio por mes natural en los 16 estudios',
+      ar:'5 عمليات مكتملة لكل استوديو في كل شهر تقويمي عبر الاستوديوهات الستة عشر'
+    };
+    for (const [language, value] of Object.entries(translated)) plan.feature_translations?.[language]?.push(value);
+  }
+}
+Object.assign(window.TAMPSLAT_USAGE_LABELS.en,{toolUse:'Tool operations per studio'});
+Object.assign(window.TAMPSLAT_USAGE_LABELS.fr,{toolUse:'Opérations par studio'});
+Object.assign(window.TAMPSLAT_USAGE_LABELS.pt,{toolUse:'Operações por estúdio'});
+Object.assign(window.TAMPSLAT_USAGE_LABELS.es,{toolUse:'Operaciones por estudio'});
+Object.assign(window.TAMPSLAT_USAGE_LABELS.ar,{toolUse:'عمليات لكل استوديو'});
