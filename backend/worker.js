@@ -286,7 +286,7 @@ async function route(req, env) {
     return json({user:safeUser(user),message:'Email verified. Your workspace is ready.'},200,{'Set-Cookie':sessionCookie(session,null)});
   }
   if(path==='/api/auth/resend-verification'&&req.method==='POST'){
-    if(!await rateLimit(env,`resend-verification:${req.headers.get('CF-Connecting-IP')||'unknown'}`,3,900))return fail('Please wait before requesting another verification email.',429);
+    if(!await rateLimit(env,`resend-verification:${req.headers.get('CF-Connecting-IP')||'unknown'}`,3,900))return fail('Too many resend attempts. Please wait 15 minutes before requesting another verification email.',429);
     const d=await bodyJson(req,5000);if(!d)return fail('Invalid JSON.');
     const email=String(d.email||'').trim().toLowerCase();
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return fail('Enter a valid email address.');
