@@ -29,7 +29,7 @@ verifyForm.addEventListener('submit',async e=>{
   const result=await window.TAMPSLAT_API.verifyEmail(pendingVerificationEmail,document.getElementById('verificationCode').value.trim());
   n.className='auth-notice';n.textContent=result.message||'Email verified. Opening your workspace…';
   const next=new URLSearchParams(location.search).get('next')||'tools.html';
-  location.assign(/^(tools\\.html|index\\.html|studios\\.html|template-library\\.html|font-studio\\.html|presentation-studio\\.html|3d-web-studio\\.html|document-converter\\.html|ebook-studio\\.html|ai-studio\\.html|batch-studio\\.html|business-operations-studio\\.html|design-studio\\.html|document-studio\\.html|file-studio\\.html|pdf-studio\\.html|spreadsheet-studio\\.html|vault-studio\\.html|zip-studio\\.html|vault\\.html|sheets\\.html)(#.*)?$/.test(next)?next:'tools.html');
+  location.assign(/^(tools\.html|index\.html|studios\.html|template-library\.html|font-studio\.html|presentation-studio\.html|3d-web-studio\.html|document-converter\.html|ebook-studio\.html|ai-studio\.html|batch-studio\.html|business-operations-studio\.html|design-studio\.html|document-studio\.html|file-studio\.html|pdf-studio\.html|spreadsheet-studio\.html|vault-studio\.html|zip-studio\.html|vault\.html|sheets\.html)(#.*)?$/.test(next)?next:'tools.html');
  }catch(err){n.className='auth-error';n.textContent=err.message;n.style.display='block';}
  finally{b.disabled=false;}
 });
