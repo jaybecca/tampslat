@@ -3,9 +3,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.3';
 const supabase=createClient('https://qqfmsvepxxagszzhhjap.supabase.co','sb_publishable_zxfcbavvt1HnL1mPiO_zzA_4l9YoG56',{auth:{flowType:'pkce',persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const title=document.getElementById('title'),status=document.getElementById('status'),retry=document.getElementById('retry'),params=new URLSearchParams(location.search);
 const candidate=params.get('next')||'tools.html';
-const next=/^(tools\\.html|index\\.html|studios\\.html|template-library\\.html|font-studio\\.html|presentation-studio\\.html|3d-web-studio\\.html|document-converter\\.html|ebook-studio\\.html|ai-studio\\.html|batch-studio\\.html|business-operations-studio\\.html|design-studio\\.html|document-studio\\.html|file-studio\\.html|pdf-studio\\.html|spreadsheet-studio\\.html|vault-studio\\.html|zip-studio\\.html|vault\\.html|sheets\\.html)(#.*)?$/.test(candidate)?candidate:'tools.html';
+const next=/^(tools\.html|index\.html|studios\.html|template-library\.html|font-studio\.html|presentation-studio\.html|3d-web-studio\.html|document-converter\.html|ebook-studio\.html|ai-studio\.html|batch-studio\.html|business-operations-studio\.html|design-studio\.html|document-studio\.html|file-studio\.html|pdf-studio\.html|spreadsheet-studio\.html|vault-studio\.html|zip-studio\.html|vault\.html|sheets\.html)(#.*)?$/.test(candidate)?candidate:'tools.html';
 try{
- if(params.get('error_description'))throw new Error(params.get('error_description').replace(/\\+/g,' '));
+ if(params.get('error_description'))throw new Error(params.get('error_description').replace(/\+/g,' '));
  const code=params.get('code');if(!code)throw new Error('Google did not return a valid sign-in code. Please try again.');
  const {data,error}=await supabase.auth.exchangeCodeForSession(code);if(error)throw error;
  const accessToken=data?.session?.access_token;if(!accessToken)throw new Error('Google sign-in completed without a valid session. Please try again.');
